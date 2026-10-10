@@ -3,56 +3,148 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>MyStock</title>
+  <title>MyStock - WMS Mobile</title>
   <script src="https://unpkg.com/html5-qrcode"></script>
   <style>
-    :root { --bg:#F8FCFB; --panel:#fff; --text:#15202b; --muted:#617080; --primary:#0b6efd; --danger:#c92a2a; --ok:#087f5b; --border:#d9e0e7; }
-    * { box-sizing:border-box; }
-    body { margin:0; background:var(--bg); color:var(--text); font-family:system-ui,-apple-system,"Segoe UI",sans-serif; }
-    header { padding:14px 16px; background:var(--panel); border-bottom:1px solid var(--border); position:sticky; top:0; z-index:5; }
-    h1 { font-size:20px; margin:0; }
-    main { padding:12px; max-width:760px; margin:0 auto; }
-    section { background:var(--panel); border:1px solid var(--border); border-radius:8px; padding:12px; margin-bottom:12px; }
-    h2 { font-size:16px; margin:0 0 10px; }
-    label { display:block; font-size:13px; color:var(--muted); margin:10px 0 6px; }
-    input { width:100%; padding:12px; border:1px solid var(--border); border-radius:8px; font-size:16px; }
-    button { width:100%; border:0; border-radius:8px; padding:11px; margin-top:8px; font-size:15px; font-weight:700; background:var(--primary); color:#fff; }
-    button.secondary { background:#495057; }
-    button.danger { background:var(--danger); }
-    button:disabled { opacity:.55; }
-    .screen { display:none; }
-    .screen.active { display:block; }
-    .menu-grid { display:grid; gap:8px; }
-    .process-group { margin-bottom:12px; }
-    .process-title { font-size:11px; font-weight:800; color:var(--muted); margin:10px 0 6px; text-transform:uppercase; letter-spacing:.04em; }
-    .menu-card { width:100%; text-align:left; background:var(--panel); color:var(--text); border:1px solid var(--border); border-radius:8px; padding:10px; margin:0; }
-    .menu-card strong { display:block; font-size:14px; margin-bottom:2px; }
-    .menu-card span { color:var(--muted); font-size:11px; font-weight:500; }
-    .badge { display:inline-block; padding:2px 6px; border-radius:999px; background:#e7f5ff; color:#0b5f9c; font-size:10px; font-weight:800; margin-bottom:5px; }
-    .screen-title { display:flex; align-items:center; gap:10px; margin-bottom:12px; }
-    .back-btn { width:auto; min-width:84px; margin:0; padding:9px 12px; background:#495057; font-size:14px; }
-    .screen-title h2 { margin:0; font-size:18px; }
-    .msg { padding:12px; border-radius:8px; margin-top:10px; display:none; white-space:pre-wrap; }
-    .msg.ok { display:block; background:#d3f9d8; color:#0b4f36; }
-    .msg.err { display:block; background:#ffe3e3; color:#8a1c1c; }
-    .item { border:1px solid var(--border); border-radius:8px; padding:12px; margin-top:10px; background:#fbfcfd; }
-    .line { margin:4px 0; }
-    .strong { font-size:17px; font-weight:800; color:var(--ok); }
-    .popup-panel { display:none; position:fixed; inset:0; z-index:20; padding:18px; background:rgba(15,23,42,.55); overflow-y:auto; }
-    .popup-panel.open { display:block; }
-    .popup-content { max-width:680px; margin:42px auto; padding:14px; border-radius:8px; background:var(--panel); box-shadow:0 14px 40px rgba(0,0,0,.24); }
-    #reader,#readerCadastro,#readerEntrada,#readerEstoque { width:100%; overflow:hidden; border-radius:8px; background:#000; }
+    :root { 
+      --bg: #f1f5f9; 
+      --panel: #ffffff; 
+      --text: #0f172a; 
+      --muted: #64748b; 
+      --primary: #2563eb; 
+      --primary-hover: #1d4ed8;
+      --danger: #ef4444; 
+      --ok: #059669; 
+      --border: #e2e8f0; 
+      --radius: 10px;
+    }
+    * { box-sizing: border-box; }
+    body { 
+      margin: 0; 
+      background: var(--bg); 
+      color: var(--text); 
+      font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; 
+      -webkit-font-smoothing: antialiased;
+    }
+    header { 
+      padding: 16px 20px; 
+      background: var(--panel); 
+      border-bottom: 1px solid var(--border); 
+      position: sticky; 
+      top: 0; 
+      z-index: 5; 
+      box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+    }
+    header h1 { font-size: 20px; font-weight: 800; margin: 0; color: var(--primary); letter-spacing: -0.02em; }
+    main { padding: 16px; max-width: 760px; margin: 0 auto; }
+    
+    section { 
+      background: var(--panel); 
+      border: 1px solid var(--border); 
+      border-radius: var(--radius); 
+      padding: 16px; 
+      margin-bottom: 16px; 
+      box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+    }
+    h2 { font-size: 16px; font-weight: 700; margin: 0 0 12px; color: var(--text); }
+    
+    label { display: block; font-size: 13px; font-weight: 600; color: var(--muted); margin: 12px 0 6px; }
+    input { 
+      width: 100%; 
+      padding: 12px 14px; 
+      border: 1px solid var(--border); 
+      border-radius: var(--radius); 
+      font-size: 15px; 
+      background: #fafafa;
+      color: var(--text);
+      transition: all 0.2s ease;
+    }
+    input:focus { outline: none; border-color: var(--primary); background: #fff; box-shadow: 0 0 0 3px rgba(37,99,235,0.1); }
 
-    /* Correção forçada do popup de endereços da entrada */
+    button { 
+      width: 100%; 
+      border: 0; 
+      border-radius: var(--radius); 
+      padding: 12px 16px; 
+      margin-top: 10px; 
+      font-size: 15px; 
+      font-weight: 700; 
+      background: var(--primary); 
+      color: #fff; 
+      cursor: pointer;
+      transition: background 0.2s ease, transform 0.1s ease;
+    }
+    button:hover { background: var(--primary-hover); }
+    button:active { transform: scale(0.99); }
+    button.secondary { background: #475569; }
+    button.secondary:hover { background: #334155; }
+    button.danger { background: var(--danger); }
+    button.danger:hover { background: #dc2626; }
+    button:disabled { opacity: .55; cursor: not-allowed; }
+
+    .screen { display: none; animation: fadeIn 0.25s ease; }
+    .screen.active { display: block; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+
+    .menu-grid { display: grid; gap: 10px; }
+    .process-group { margin-bottom: 16px; }
+    .process-title { font-size: 11px; font-weight: 800; color: var(--muted); margin: 14px 0 8px; text-transform: uppercase; letter-spacing: .06em; }
+    
+    .menu-card { 
+      width: 100%; 
+      text-align: left; 
+      background: var(--panel); 
+      color: var(--text); 
+      border: 1px solid var(--border); 
+      border-radius: var(--radius); 
+      padding: 14px; 
+      margin: 0; 
+      box-shadow: 0 1px 2px rgba(0,0,0,0.02);
+      transition: all 0.2s ease;
+    }
+    .menu-card:hover { border-color: var(--primary); box-shadow: 0 4px 12px rgba(37,99,235,0.08); transform: translateY(-1px); }
+    .menu-card strong { display: block; font-size: 15px; margin-bottom: 3px; color: var(--text); }
+    .menu-card span { color: var(--muted); font-size: 12px; font-weight: 500; }
+    
+    .badge { 
+      display: inline-block; 
+      padding: 3px 8px; 
+      border-radius: 999px; 
+      background: #eff6ff; 
+      color: #1d4ed8; 
+      font-size: 11px; 
+      font-weight: 700; 
+      margin-bottom: 6px; 
+    }
+    
+    .screen-title { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }
+    .back-btn { width: auto; min-width: 90px; margin: 0; padding: 10px 14px; background: #475569; font-size: 14px; }
+    .screen-title h2 { margin: 0; font-size: 18px; font-weight: 700; }
+    
+    .msg { padding: 12px 14px; border-radius: var(--radius); margin-top: 12px; display: none; font-size: 14px; font-weight: 500; white-space: pre-wrap; }
+    .msg.ok { display: block; background: #ecfdf5; color: #065f46; border: 1px solid #a7f3d0; }
+    .msg.err { display: block; background: #fef2f2; color: #991b1b; border: 1px solid #fecaca; }
+    
+    .item { border: 1px solid var(--border); border-radius: var(--radius); padding: 14px; margin-top: 10px; background: #f8fafc; }
+    .line { margin: 6px 0; font-size: 14px; }
+    .strong { font-size: 16px; font-weight: 800; color: var(--ok); }
+    
+    .popup-panel { display: none; position: fixed; inset: 0; z-index: 20; padding: 20px; background: rgba(15,23,42,0.6); backdrop-filter: blur(4px); overflow-y: auto; }
+    .popup-panel.open { display: block; }
+    .popup-content { max-width: 600px; margin: 40px auto; padding: 20px; border-radius: 12px; background: var(--panel); box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1), 0 10px 10px -5px rgba(0,0,0,0.04); }
+    
+    #reader,#readerCadastro,#readerEntrada,#readerEstoque { width: 100%; overflow: hidden; border-radius: var(--radius); background: #000; margin-top: 10px; }
+
+    /* Popup específico de endereços da entrada ajustado com flex */
     #enderecosEntrada.popup-panel {
       display: none;
       position: fixed;
       inset: 0;
       z-index: 9999;
-      box-sizing: border-box;
-      padding: 18px;
+      padding: 16px;
       overflow-y: auto;
-      background: rgba(0, 0, 0, 0.65);
+      background: rgba(15,23,42,0.6);
+      backdrop-filter: blur(4px);
       align-items: center;
       justify-content: center;
     }
@@ -60,8 +152,6 @@
       display: flex !important;
     }
     #enderecosEntrada .popup-content {
-      display: block;
-      box-sizing: border-box;
       width: 100%;
       max-width: 520px;
       max-height: 85vh;
@@ -70,15 +160,12 @@
       margin: auto;
       border-radius: 12px;
       background: #fff;
-      color: #222;
-    }
-    #enderecosEntrada .item {
-      color: #222;
+      color: #0f172a;
     }
   </style>
 </head>
 <body>
-<header><h1>MyStock</h1></header>
+<header><h1>MyStock WMS</h1></header>
 <main>
   <div id="screen-menu" class="screen active">
     <section>
@@ -304,12 +391,10 @@ function abrirLotesEntrada(){ clearMsg($("entMsg")); const produto=$("entNumero"
 function renderEnderecos(container,itens,selectable=false){ renderItems(container,itens,(item,idx)=>`<div class="item"><div class="line"><b>Endereço:</b> ${esc(item.codigo)}</div><div class="line"><b>Ocupado:</b> ${esc(item.ocupado)}</div><div class="line"><b>Limite:</b> ${esc(item.capacidade_maxima)}</div><div class="line strong">Disponível: ${esc(item.disponivel)}</div>${selectable?`<button class="secondary escolher-endereco" data-codigo="${esc(item.codigo)}">Usar este endereço</button>`:`<button class="secondary editar-endereco" data-index="${idx}">Abrir / editar capacidade</button>`}</div>`); if(selectable){ document.querySelectorAll(".escolher-endereco").forEach(b=>b.onclick=()=>{ $("entEndereco").value=b.dataset.codigo; $("enderecosEntrada").classList.remove("open"); showMsg($("entMsg"),`Endereço selecionado: ${b.dataset.codigo}`,true); }); } else { enderecosCache=itens; document.querySelectorAll(".editar-endereco").forEach(b=>b.onclick=()=>{ $("enderecosPopup").classList.remove("open"); abrirDetalheEndereco(enderecosCache[parseInt(b.dataset.index,10)]); }); } }
 function abrirEnderecosCadastro(){ $("cadEnderecosPopup").classList.add("open"); try{ const data=call("listarEnderecos","true"); renderItems($("cadEnderecosLista"),data.itens,item=>`<div class="item"><div class="line"><b>Endereço:</b> ${esc(item.codigo)}</div><div class="line strong">Disponível: ${esc(item.disponivel)}</div><button class="secondary cad-end" data-codigo="${esc(item.codigo)}">Usar este endereço</button></div>`); document.querySelectorAll(".cad-end").forEach(b=>b.onclick=()=>{ $("cadEndereco").value=b.dataset.codigo; $("cadEnderecosPopup").classList.remove("open"); showMsg($("cadMsg"),`Endereço selecionado: ${b.dataset.codigo}`,true); }); }catch(e){ $("cadEnderecosLista").innerHTML=`<div class="msg err">${esc(e.message)}</div>`; } }
 
-// FORÇANDO A ABERTURA DO POPUP ANTES DA CHAMADA DA API
 function consultarEnderecos(disponiveis = false) {
   const popup = disponiveis ? $("enderecosEntrada") : $("enderecosPopup");
   const container = disponiveis ? $("enderecosEntradaResultado") : $("enderecosResultado");
 
-  // Garante a abertura imediata na tela
   if (popup) {
     popup.classList.add("open");
   }
