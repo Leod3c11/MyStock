@@ -1,0 +1,293 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>MyStock</title>
+  <script src="https://unpkg.com/html5-qrcode"></script>
+  <style>
+    :root { --bg:#F8FCFB; --panel:#fff; --text:#15202b; --muted:#617080; --primary:#0b6efd; --danger:#c92a2a; --ok:#087f5b; --border:#d9e0e7; }
+    * { box-sizing:border-box; }
+    body { margin:0; background:var(--bg); color:var(--text); font-family:system-ui,-apple-system,"Segoe UI",sans-serif; }
+    header { padding:14px 16px; background:var(--panel); border-bottom:1px solid var(--border); position:sticky; top:0; z-index:5; }
+    h1 { font-size:20px; margin:0; }
+    main { padding:12px; max-width:760px; margin:0 auto; }
+    section { background:var(--panel); border:1px solid var(--border); border-radius:8px; padding:12px; margin-bottom:12px; }
+    h2 { font-size:16px; margin:0 0 10px; }
+    label { display:block; font-size:13px; color:var(--muted); margin:10px 0 6px; }
+    input { width:100%; padding:12px; border:1px solid var(--border); border-radius:8px; font-size:16px; }
+    button { width:100%; border:0; border-radius:8px; padding:11px; margin-top:8px; font-size:15px; font-weight:700; background:var(--primary); color:#fff; }
+    button.secondary { background:#495057; }
+    button.danger { background:var(--danger); }
+    button:disabled { opacity:.55; }
+    .screen { display:none; }
+    .screen.active { display:block; }
+    .menu-grid { display:grid; gap:8px; }
+    .process-group { margin-bottom:12px; }
+    .process-title { font-size:11px; font-weight:800; color:var(--muted); margin:10px 0 6px; text-transform:uppercase; letter-spacing:.04em; }
+    .menu-card { width:100%; text-align:left; background:var(--panel); color:var(--text); border:1px solid var(--border); border-radius:8px; padding:10px; margin:0; }
+    .menu-card strong { display:block; font-size:14px; margin-bottom:2px; }
+    .menu-card span { color:var(--muted); font-size:11px; font-weight:500; }
+    .badge { display:inline-block; padding:2px 6px; border-radius:999px; background:#e7f5ff; color:#0b5f9c; font-size:10px; font-weight:800; margin-bottom:5px; }
+    .screen-title { display:flex; align-items:center; gap:10px; margin-bottom:12px; }
+    .back-btn { width:auto; min-width:84px; margin:0; padding:9px 12px; background:#495057; font-size:14px; }
+    .screen-title h2 { margin:0; font-size:18px; }
+    .msg { padding:12px; border-radius:8px; margin-top:10px; display:none; white-space:pre-wrap; }
+    .msg.ok { display:block; background:#d3f9d8; color:#0b4f36; }
+    .msg.err { display:block; background:#ffe3e3; color:#8a1c1c; }
+    .item { border:1px solid var(--border); border-radius:8px; padding:12px; margin-top:10px; background:#fbfcfd; }
+    .line { margin:4px 0; }
+    .strong { font-size:17px; font-weight:800; color:var(--ok); }
+    .popup-panel { display:none; position:fixed; inset:0; z-index:20; padding:18px; background:rgba(15,23,42,.55); overflow-y:auto; }
+    .popup-panel.open { display:block; }
+    .popup-content { max-width:680px; margin:42px auto; padding:14px; border-radius:8px; background:var(--panel); box-shadow:0 14px 40px rgba(0,0,0,.24); }
+    #reader,#readerCadastro,#readerEntrada,#readerEstoque { width:100%; overflow:hidden; border-radius:8px; background:#000; }
+  </style>
+</head>
+<body>
+<header><h1>MyStock</h1></header>
+<main>
+  <div id="screen-menu" class="screen active">
+    <section>
+      <h2>Menu Principal</h2>
+      <div class="process-group"><div class="process-title">Cadastro</div><div class="menu-grid">
+        <button class="menu-card" data-screen="cadastro"><span class="badge">Produto</span><strong>Cadastrar produto</strong><span>Produto, lote, QC, datas e endereço inicial.</span></button>
+        <button class="menu-card" data-screen="produtos"><span class="badge">Catálogo</span><strong>Produtos cadastrados</strong><span>Produtos, códigos, lotes, datas e saldo.</span></button>
+      </div></div>
+      <div class="process-group"><div class="process-title">Estoque</div><div class="menu-grid">
+        <button class="menu-card" data-screen="entrada"><span class="badge">Entrada</span><strong>Registrar entrada</strong><span>Adicionar saldo em endereço físico.</span></button>
+        <button class="menu-card" data-screen="enderecos"><span class="badge">Endereçamento</span><strong>Endereços e capacidade</strong><span>Ocupação e limite máximo.</span></button>
+        <button class="menu-card" data-screen="estoque"><span class="badge">Inventário</span><strong>Consultar estoque</strong><span>Bipar e ver saldo/endereço.</span></button>
+      </div></div>
+      <div class="process-group"><div class="process-title">Operação</div><div class="menu-grid">
+        <button class="menu-card" data-screen="separacao"><span class="badge">Picking</span><strong>Separação</strong><span>Separar pedido do cliente.</span></button>
+      </div></div>
+      <div class="process-group"><div class="process-title">Histórico</div><div class="menu-grid">
+        <button class="menu-card" data-screen="movimentacoes"><span class="badge">Auditoria</span><strong>Movimentações</strong><span>Entradas, saídas e saldos.</span></button>
+      </div></div>
+    </section>
+  </div>
+
+  <div id="screen-cadastro" class="screen">
+    <div class="screen-title"><button class="back-btn" data-screen="menu">Voltar</button><h2>Cadastrar produto</h2></div>
+    <section>
+      <h2>Dados do Produto</h2>
+      <label>Número do produto</label><input id="cadNumero" inputmode="numeric" placeholder="Ex.: 3000281">
+      <label>QR Code / código de barras</label><input id="cadCodigoBarras" inputmode="numeric" placeholder="Bipe ou digite">
+      <div id="readerCadastro"></div><button id="startScannerCadastro" class="secondary">Ler QR / código de barras</button><div id="scanCadastroMsg" class="msg"></div>
+      <label>Nome do produto</label><input id="cadNome" placeholder="Ex.: Fluconid">
+      <label>Lote</label><input id="cadLote" inputmode="numeric" placeholder="Ex.: 30010281">
+      <label>Unidades por caixa</label><input id="cadQc" inputmode="numeric" placeholder="Ex.: 60">
+      <label>Data de fabricação</label><input id="cadFabricacao" placeholder="DD/MM/AAAA">
+      <label>Data de vencimento</label><input id="cadVencimento" placeholder="DD/MM/AAAA">
+      <label>Quantidade inicial para endereçar</label><input id="cadQuantidadeEntrada" inputmode="numeric" placeholder="Opcional">
+      <label>Endereço selecionado</label><input id="cadEndereco" readonly placeholder="Opcional">
+      <button id="abrirEnderecosCadastro" class="secondary">Selecionar endereço disponível</button>
+      <div id="cadEnderecosPopup" class="popup-panel"><div class="popup-content"><h2>Endereços com espaço</h2><button id="fecharEnderecosCadastro" class="danger">Fechar</button><div id="cadEnderecosLista"></div></div></div>
+      <button id="salvarCadastro">Salvar produto</button><div id="cadMsg" class="msg"></div>
+    </section>
+  </div>
+
+  <div id="screen-produtos" class="screen">
+    <div class="screen-title"><button class="back-btn" data-screen="menu">Voltar</button><h2>Produtos cadastrados</h2></div>
+    <section><h2>Catálogo de Produtos</h2><label>Número, código de barras ou nome</label><input id="prodFiltro" placeholder="Opcional"><button id="consultarProdutos">Consultar produtos</button><div id="produtosResultado"></div></section>
+  </div>
+
+  <div id="screen-entrada" class="screen">
+    <div class="screen-title"><button class="back-btn" data-screen="menu">Voltar</button><h2>Registrar entrada</h2></div>
+    <section>
+      <h2>Entrada no Estoque</h2>
+      <label>Número do produto</label><input id="entNumero" inputmode="numeric" placeholder="Ex.: 3000281">
+      <div id="readerEntrada"></div><button id="startScannerEntrada" class="secondary">Ler QR / código de barras</button><div id="scanEntradaMsg" class="msg"></div>
+      <label>Lote</label><input id="entLote" inputmode="numeric" placeholder="Ex.: 30010281">
+      <button id="abrirLotesEntrada" class="secondary">Selecionar lote cadastrado</button>
+      <div id="lotesEntradaPopup" class="popup-panel"><div class="popup-content"><h2>Lotes do produto</h2><button id="fecharLotesEntrada" class="danger">Fechar</button><div id="lotesEntradaLista"></div></div></div>
+      <label>Endereço</label><input id="entEndereco" placeholder="Ex.: A01-R01-N01">
+      <button id="verEnderecosEntrada" class="secondary">Ver endereços disponíveis</button>
+      <div id="enderecosEntrada" class="popup-panel">
+        <div class="popup-content">
+          <h2>Endereços disponíveis</h2>
+          <button id="fecharEnderecosEntradaPopup" class="danger">Fechar</button>
+          <div id="enderecosEntradaResultado"></div>
+        </div>
+      </div>
+      <label>Quantidade de entrada</label><input id="entQuantidade" inputmode="numeric" placeholder="Ex.: 9960">
+      <button id="salvarEntrada">Registrar entrada</button><div id="entMsg" class="msg"></div>
+    </section>
+  </div>
+
+  <div id="screen-enderecos" class="screen">
+    <div class="screen-title"><button class="back-btn" data-screen="menu">Voltar</button><h2>Endereços e capacidade</h2></div>
+    <section><h2>Cadastrar / Ajustar Endereço</h2><label>Endereço</label><input id="endCodigo" placeholder="Ex.: A01-R01-N01"><label>Limite máximo em unidades</label><input id="endCapacidade" inputmode="numeric" placeholder="Ex.: 12000"><button id="salvarEndereco">Salvar endereço</button><div id="endMsg" class="msg"></div></section>
+    <section><h2>Mapa de Endereços</h2><button id="consultarEnderecos">Consultar endereços</button><div id="enderecosPopup" class="popup-panel"><div class="popup-content"><h2>Endereços cadastrados</h2><button id="fecharEnderecosPopup" class="danger">Fechar</button><div id="enderecosResultado"></div></div></div></section>
+  </div>
+
+  <div id="screen-endereco-detalhe" class="screen">
+    <div class="screen-title"><button class="back-btn" data-screen="enderecos">Voltar</button><h2>Detalhe do endereço</h2></div>
+    <section><h2>Capacidade do Endereço</h2><div id="endDetalheResumo"></div><label>Nova capacidade máxima</label><input id="endDetalheCapacidade" inputmode="numeric"><button id="salvarEnderecoDetalhe">Salvar nova capacidade</button><div id="endDetalheMsg" class="msg"></div></section>
+  </div>
+
+  <div id="screen-estoque" class="screen">
+    <div class="screen-title"><button class="back-btn" data-screen="menu">Voltar</button><h2>Consultar estoque</h2></div>
+    <section><h2>Filtro</h2><div id="readerEstoque"></div><button id="startScannerEstoque">Abrir câmera</button><div id="scanEstoqueMsg" class="msg"></div><label>Número do produto</label><input id="estNumero" inputmode="numeric" placeholder="Opcional"><button id="consultarEstoque">Consultar</button><div id="estoqueResultado"></div></section>
+  </div>
+
+  <div id="screen-separacao" class="screen">
+    <div class="screen-title"><button class="back-btn" data-screen="menu">Voltar</button><h2>Separação</h2></div>
+    <section><h2>Bipar Produto</h2><div id="reader"></div><button id="startScanner">Abrir câmera</button><div id="scanMsg" class="msg"></div></section>
+    <section><h2>Pedido do Cliente</h2><label>Número do produto</label><input id="produto" inputmode="numeric"><label>Quantidade solicitada</label><input id="quantidade" inputmode="numeric"><button id="buscar">Ver orientação</button><div id="resultado"></div></section>
+    <section id="confirmBox" style="display:none"><h2>Confirmar Separação</h2><div id="confirmItens"></div><button id="confirmar">Confirmar e baixar estoque</button><button id="cancelar" class="danger">Cancelar</button><div id="confirmMsg" class="msg"></div></section>
+  </div>
+
+  <div id="screen-movimentacoes" class="screen">
+    <div class="screen-title"><button class="back-btn" data-screen="menu">Voltar</button><h2>Movimentações</h2></div>
+    <section><h2>Histórico Operacional</h2><label>Número do produto</label><input id="movNumero" inputmode="numeric" placeholder="Opcional"><button id="consultarMovimentacoes">Consultar movimentações</button><div id="movResultado"></div></section>
+  </div>
+</main>
+
+<script>
+let scanner=null, scannerCadastro=null, scannerEntrada=null, scannerEstoque=null;
+let currentPreview=null, enderecosCache=[], enderecoDetalheAtual=null;
+const $ = id => document.getElementById(id);
+const esc = v => String(v ?? "").replace(/[&<>"']/g, ch => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[ch]));
+function call(name, payload="") { const raw = typeof payload === "string" ? window.MyStock[name](payload) : window.MyStock[name](JSON.stringify(payload)); const data = JSON.parse(raw); if (!data.ok) throw new Error(data.error || "Falha na operação."); return data; }
+function limparTelaOperacional(){
+  // Fecha janelas e seletores abertos.
+  document.querySelectorAll(".popup-panel").forEach(el=>el.classList.remove("open"));
+
+  // Limpa campos de entrada sem apagar dados do banco.
+  document.querySelectorAll(".screen input").forEach(el=>{
+    el.value="";
+  });
+
+  // Limpa mensagens, resultados e listas da operação anterior.
+  [
+    "cadMsg","scanCadastroMsg","cadEnderecosLista",
+    "produtosResultado",
+    "entMsg","scanEntradaMsg","lotesEntradaLista","enderecosEntrada",
+    "endMsg","enderecosResultado",
+    "endDetalheResumo","endDetalheMsg",
+    "scanEstoqueMsg","estoqueResultado",
+    "scanMsg","resultado","confirmItens","confirmMsg",
+    "movResultado"
+  ].forEach(id=>{
+    const el=$(id);
+    if(el){
+      el.innerHTML="";
+      if(el.classList.contains("msg")) el.className="msg";
+    }
+  });
+
+  // Reinicia os controles da separação.
+  if($("confirmBox")) $("confirmBox").style.display="none";
+  if($("confirmar")) $("confirmar").disabled=false;
+  if($("cancelar")) $("cancelar").disabled=false;
+
+  // Descarta a prévia antiga e o endereço selecionado em memória.
+  currentPreview=null;
+  enderecoDetalheAtual=null;
+  enderecosCache=[];
+
+  // Limpa os espaços dos leitores.
+  ["reader","readerCadastro","readerEntrada","readerEstoque"].forEach(id=>{
+    const el=$(id);
+    if(el) el.innerHTML="";
+  });
+
+  // Se algum leitor ainda estiver ativo, tenta encerrar a câmera.
+  [
+    ["scanner", s=>scanner=s],
+    ["scannerCadastro", s=>scannerCadastro=s],
+    ["scannerEntrada", s=>scannerEntrada=s],
+    ["scannerEstoque", s=>scannerEstoque=s]
+  ].forEach(([nome,atribuir])=>{
+    const sc=({
+      scanner,
+      scannerCadastro,
+      scannerEntrada,
+      scannerEstoque
+    })[nome];
+
+    if(sc){
+      atribuir(null);
+      try{
+        sc.stop()
+          .then(()=>{ try{sc.clear();}catch(e){} })
+          .catch(()=>{ try{sc.clear();}catch(e){} });
+      }catch(e){}
+    }
+  });
+}
+
+function showScreen(name){
+  // Ao voltar ao menu, encerra a tarefa e prepara telas limpas.
+  if(name==="menu") limparTelaOperacional();
+
+  document.querySelectorAll(".screen").forEach(e=>e.classList.remove("active"));
+  const destino=$(`screen-${name}`);
+  if(!destino) return;
+  destino.classList.add("active");
+  scrollTo(0,0);
+}
+function showMsg(el,text,ok=true){ el.textContent=text; el.className=ok?"msg ok":"msg err"; }
+function clearMsg(el){ el.textContent=""; el.className="msg"; }
+function dateMask(v){ const d=String(v||"").replace(/\D/g,"").slice(0,8); if(d.length<=2)return d; if(d.length<=4)return `${d.slice(0,2)}/${d.slice(2)}`; return `${d.slice(0,2)}/${d.slice(2,4)}/${d.slice(4)}`; }
+function attachDateMask(id){ $(id).addEventListener("input",()=>$(id).value=dateMask($(id).value)); }
+let contextoAudioMyStock=null;
+function prepararAudioMyStock(){
+  try{
+    const AudioCtx=window.AudioContext||window.webkitAudioContext;
+    if(!AudioCtx)return;
+    if(!contextoAudioMyStock)contextoAudioMyStock=new AudioCtx();
+    if(contextoAudioMyStock.state==="suspended")contextoAudioMyStock.resume();
+  }catch(e){}
+}
+function bipLeituraMyStock(){
+  try{
+    prepararAudioMyStock();
+    if(!contextoAudioMyStock)return;
+    const ctx=contextoAudioMyStock;
+    const oscilador=ctx.createOscillator();
+    const volume=ctx.createGain();
+    oscilador.type="sine";
+    oscilador.frequency.setValueAtTime(1800,ctx.currentTime);
+    volume.gain.setValueAtTime(0.0001,ctx.currentTime);
+    volume.gain.exponentialRampToValueAtTime(0.25,ctx.currentTime+0.015);
+    volume.gain.exponentialRampToValueAtTime(0.0001,ctx.currentTime+0.13);
+    oscilador.connect(volume);
+    volume.connect(ctx.destination);
+    oscilador.start(ctx.currentTime);
+    oscilador.stop(ctx.currentTime+0.14);
+  }catch(e){}
+}
+function formats(){ return window.Html5QrcodeSupportedFormats ? [Html5QrcodeSupportedFormats.QR_CODE,Html5QrcodeSupportedFormats.CODE_128,Html5QrcodeSupportedFormats.CODE_39,Html5QrcodeSupportedFormats.EAN_13,Html5QrcodeSupportedFormats.EAN_8,Html5QrcodeSupportedFormats.ITF] : undefined; }
+async function scan(targetReader,targetInput,targetMsg,scannerSetter,startButton,after){ prepararAudioMyStock(); clearMsg(targetMsg); if(!window.Html5Qrcode){ showMsg(targetMsg,"Leitor não carregou. Verifique a internet.",false); return; } const sc=new Html5Qrcode(targetReader.id); scannerSetter(sc); try{ await sc.start({facingMode:"environment"},{fps:10,qrbox:{width:240,height:160},formatsToSupport:formats()},async text=>{ bipLeituraMyStock(); targetInput.value=String(text||"").trim(); showMsg(targetMsg,`Código lido: ${targetInput.value}`,true); await sc.stop(); sc.clear(); startButton.disabled=false; scannerSetter(null); if(after) after(); }); startButton.disabled=true; }catch(e){ showMsg(targetMsg,"Não consegui abrir a câmera. Permita o acesso à câmera.",false); startButton.disabled=false; scannerSetter(null); } }
+function renderItems(container, itens, tpl, empty="Nenhum registro encontrado."){ container.innerHTML = itens.length ? itens.map(tpl).join("") : `<div class="msg err">${empty}</div>`; }
+
+function salvarCadastro(){ clearMsg($("cadMsg")); try{ const data=call("salvarProduto",{numero:$("cadNumero").value.trim(),codigo_barras:$("cadCodigoBarras").value.trim(),nome:$("cadNome").value.trim(),lote:$("cadLote").value.trim(),unidades_por_caixa:parseInt($("cadQc").value,10),fabricacao:$("cadFabricacao").value.trim(),vencimento:$("cadVencimento").value.trim(),endereco:$("cadEndereco").value.trim().toUpperCase(),quantidade_entrada:parseInt($("cadQuantidadeEntrada").value||"0",10)}); showMsg($("cadMsg"),data.message,true); }catch(e){ showMsg($("cadMsg"),e.message,false); } }
+function consultarProdutos(){ try{ const data=call("listarProdutos",$("prodFiltro").value.trim()); renderItems($("produtosResultado"),data.itens,item=>`<div class="item"><div class="line"><b>${esc(item.numero)} - ${esc(item.nome)}</b></div>${item.codigo_barras?`<div class="line"><b>QR / código:</b> ${esc(item.codigo_barras)}</div>`:""}<div class="line"><b>Lote:</b> ${esc(item.lote)}</div><div class="line"><b>QC:</b> ${esc(item.unidades_por_caixa)} unidade(s)</div><div class="line"><b>Fabricação:</b> ${esc(item.fabricacao)}</div><div class="line"><b>Vencimento:</b> ${esc(item.vencimento)}</div><div class="line strong">Saldo total do lote: ${esc(item.saldo_total)} unidade(s)</div></div>`); }catch(e){ $("produtosResultado").innerHTML=`<div class="msg err">${esc(e.message)}</div>`; } }
+function salvarEntrada(){ clearMsg($("entMsg")); try{ const data=call("registrarEntrada",{numero:$("entNumero").value.trim(),lote:$("entLote").value.trim(),endereco:$("entEndereco").value.trim().toUpperCase(),quantidade:parseInt($("entQuantidade").value,10)}); showMsg($("entMsg"),data.message,true); }catch(e){ showMsg($("entMsg"),e.message,false); } }
+function abrirLotesEntrada(){ clearMsg($("entMsg")); const produto=$("entNumero").value.trim(); if(!produto){ showMsg($("entMsg"),"Informe o produto antes de selecionar o lote.",false); return; } $("lotesEntradaPopup").classList.add("open"); try{ const data=call("listarLotes",produto); renderItems($("lotesEntradaLista"),data.itens,item=>`<div class="item"><div class="line"><b>${esc(item.numero)} - ${esc(item.nome)}</b></div><div class="line"><b>Lote:</b> ${esc(item.lote)}</div><div class="line"><b>QC:</b> ${esc(item.unidades_por_caixa)}</div><div class="line"><b>Fabricação:</b> ${esc(item.fabricacao)}</div><div class="line"><b>Vencimento:</b> ${esc(item.vencimento)}</div><button class="secondary escolher-lote" data-lote="${esc(item.lote)}">Usar este lote</button></div>`); document.querySelectorAll(".escolher-lote").forEach(b=>b.onclick=()=>{ $("entLote").value=b.dataset.lote; $("lotesEntradaPopup").classList.remove("open"); showMsg($("entMsg"),`Lote selecionado: ${b.dataset.lote}`,true); }); }catch(e){ $("lotesEntradaLista").innerHTML=`<div class="msg err">${esc(e.message)}</div>`; } }
+function renderEnderecos(container,itens,selectable=false){ renderItems(container,itens,(item,idx)=>`<div class="item"><div class="line"><b>Endereço:</b> ${esc(item.codigo)}</div><div class="line"><b>Ocupado:</b> ${esc(item.ocupado)}</div><div class="line"><b>Limite:</b> ${esc(item.capacidade_maxima)}</div><div class="line strong">Disponível: ${esc(item.disponivel)}</div>${selectable?`<button class="secondary escolher-endereco" data-codigo="${esc(item.codigo)}">Usar este endereço</button>`:`<button class="secondary editar-endereco" data-index="${idx}">Abrir / editar capacidade</button>`}</div>`); if(selectable){ document.querySelectorAll(".escolher-endereco").forEach(b=>b.onclick=()=>{ $("entEndereco").value=b.dataset.codigo; $("enderecosEntrada").classList.remove("open"); showMsg($("entMsg"),`Endereço selecionado: ${b.dataset.codigo}`,true); }); } else { enderecosCache=itens; document.querySelectorAll(".editar-endereco").forEach(b=>b.onclick=()=>{ $("enderecosPopup").classList.remove("open"); abrirDetalheEndereco(enderecosCache[parseInt(b.dataset.index,10)]); }); } }
+function abrirEnderecosCadastro(){ $("cadEnderecosPopup").classList.add("open"); try{ const data=call("listarEnderecos","true"); renderItems($("cadEnderecosLista"),data.itens,item=>`<div class="item"><div class="line"><b>Endereço:</b> ${esc(item.codigo)}</div><div class="line strong">Disponível: ${esc(item.disponivel)}</div><button class="secondary cad-end" data-codigo="${esc(item.codigo)}">Usar este endereço</button></div>`); document.querySelectorAll(".cad-end").forEach(b=>b.onclick=()=>{ $("cadEndereco").value=b.dataset.codigo; $("cadEnderecosPopup").classList.remove("open"); showMsg($("cadMsg"),`Endereço selecionado: ${b.dataset.codigo}`,true); }); }catch(e){ $("cadEnderecosLista").innerHTML=`<div class="msg err">${esc(e.message)}</div>`; } }
+function consultarEnderecos(disponiveis=false){ const container=disponiveis?$("enderecosEntradaResultado"):$("enderecosResultado"); if(disponiveis)$("enderecosEntrada").classList.add("open"); else $("enderecosPopup").classList.add("open"); try{ const data=call("listarEnderecos",disponiveis?"true":"false"); renderEnderecos(container,data.itens,disponiveis); }catch(e){ container.innerHTML=`<div class="msg err">${esc(e.message)}</div>`; } }
+function salvarEndereco(){ clearMsg($("endMsg")); try{ const data=call("salvarEndereco",{codigo:$("endCodigo").value.trim().toUpperCase(),capacidade_maxima:parseInt($("endCapacidade").value,10)}); showMsg($("endMsg"),data.message,true); }catch(e){ showMsg($("endMsg"),e.message,false); } }
+function abrirDetalheEndereco(item){ enderecoDetalheAtual=item; clearMsg($("endDetalheMsg")); $("endDetalheCapacidade").value=item.capacidade_maxima; $("endDetalheResumo").innerHTML=`<div class="item"><div class="line"><b>Endereço:</b> ${esc(item.codigo)}</div><div class="line"><b>Ocupado:</b> ${esc(item.ocupado)}</div><div class="line"><b>Capacidade atual:</b> ${esc(item.capacidade_maxima)}</div><div class="line strong">Disponível: ${esc(item.disponivel)}</div></div>`; showScreen("endereco-detalhe"); }
+function salvarEnderecoDetalhe(){ if(!enderecoDetalheAtual)return; clearMsg($("endDetalheMsg")); try{ const data=call("salvarEndereco",{codigo:enderecoDetalheAtual.codigo,capacidade_maxima:parseInt($("endDetalheCapacidade").value,10)}); showMsg($("endDetalheMsg"),data.message,true); }catch(e){ showMsg($("endDetalheMsg"),e.message,false); } }
+function consultarEstoque(){ try{ const data=call("consultarEstoque",$("estNumero").value.trim()); renderItems($("estoqueResultado"),data.itens,item=>`<div class="item"><div class="line"><b>${esc(item.numero)} - ${esc(item.nome)}</b></div>${item.codigo_barras?`<div class="line"><b>QR / código:</b> ${esc(item.codigo_barras)}</div>`:""}<div class="line"><b>Lote:</b> ${esc(item.lote)}</div><div class="line"><b>Endereço:</b> ${esc(item.endereco)}</div><div class="line strong">Saldo: ${esc(item.quantidade)} unidade(s)</div><div class="line"><b>QC:</b> ${esc(item.unidades_por_caixa)} unidade(s) por caixa</div><div class="line"><b>Fabricação:</b> ${esc(item.fabricacao)}</div><div class="line"><b>Vencimento:</b> ${esc(item.vencimento)}</div></div>`); }catch(e){ $("estoqueResultado").innerHTML=`<div class="msg err">${esc(e.message)}</div>`; } }
+function buscarOrientacao(){ $("confirmBox").style.display="none"; try{ currentPreview=call("previewSeparacao",{numero:$("produto").value.trim(),quantidade:parseInt($("quantidade").value,10)}); $("resultado").innerHTML=`<div class="item"><b>Produto:</b> ${esc(currentPreview.produto)} - ${esc(currentPreview.nome)}<br><b>Solicitado:</b> ${esc(currentPreview.quantidade_pedida)} unidade(s)</div>`; $("confirmItens").innerHTML=currentPreview.orientacoes.map((item,idx)=>`<div class="item"><b>Item ${idx+1}</b><div class="line"><b>Lote:</b> ${esc(item.lote)}</div><div class="line"><b>Endereço:</b> ${esc(item.endereco)}</div><div class="line strong">Separar: ${esc(item.qtd_operador)} ${esc(item.unidade_operador)}</div><label>Digite a quantidade de ${esc(item.unidade_operador)} que você pegou</label><input class="confirmInput" inputmode="numeric" data-index="${idx}"></div>`).join(""); $("confirmBox").style.display="block"; $("confirmar").disabled=false; }catch(e){ $("resultado").innerHTML=`<div class="msg err">${esc(e.message)}</div>`; } }
+function confirmarSeparacao(){ if(!currentPreview)return; try{ const confirmacoes=[...document.querySelectorAll(".confirmInput")].map(i=>({index:parseInt(i.dataset.index,10),quantidade_confirmada:parseInt(i.value,10)})); const data=call("confirmarSeparacao",{token:currentPreview.token,confirmacoes}); showMsg($("confirmMsg"),data.message,true); $("confirmar").disabled=true; }catch(e){ showMsg($("confirmMsg"),e.message,false); } }
+function consultarMovimentacoes(){ try{ const data=call("listarMovimentacoes",$("movNumero").value.trim()); renderItems($("movResultado"),data.itens,item=>`<div class="item"><span class="badge">${esc(item.tipo)}</span><div class="line"><b>${esc(item.produto_numero)} - ${esc(item.produto_nome)}</b></div><div class="line"><b>Lote:</b> ${esc(item.lote)}</div><div class="line"><b>Endereço:</b> ${esc(item.endereco)}</div><div class="line"><b>Quantidade:</b> ${esc(item.quantidade)}</div><div class="line"><b>Saldo após:</b> ${esc(item.saldo_apos)}</div><div class="line"><b>Data/hora:</b> ${esc(item.data_hora)}</div></div>`); }catch(e){ $("movResultado").innerHTML=`<div class="msg err">${esc(e.message)}</div>`; } }
+
+document.querySelectorAll("[data-screen]").forEach(b=>b.onclick=()=>showScreen(b.dataset.screen));
+$("salvarCadastro").onclick=salvarCadastro; $("consultarProdutos").onclick=consultarProdutos; $("salvarEntrada").onclick=salvarEntrada; $("abrirLotesEntrada").onclick=abrirLotesEntrada; $("salvarEndereco").onclick=salvarEndereco; $("salvarEnderecoDetalhe").onclick=salvarEnderecoDetalhe; $("consultarEnderecos").onclick=()=>consultarEnderecos(false); $("verEnderecosEntrada").onclick=()=>consultarEnderecos(true); $("consultarEstoque").onclick=consultarEstoque; $("buscar").onclick=buscarOrientacao; $("confirmar").onclick=confirmarSeparacao; $("cancelar").onclick=()=>{$("confirmBox").style.display="none";$("resultado").innerHTML="";}; $("consultarMovimentacoes").onclick=consultarMovimentacoes;
+$("abrirEnderecosCadastro").onclick=abrirEnderecosCadastro; $("fecharEnderecosCadastro").onclick=()=>$("cadEnderecosPopup").classList.remove("open"); $("fecharLotesEntrada").onclick=()=>$("lotesEntradaPopup").classList.remove("open"); $("fecharEnderecosPopup").onclick=()=>$("enderecosPopup").classList.remove("open"); $("fecharEnderecosEntradaPopup").onclick=()=>$("enderecosEntrada").classList.remove("open");
+["cadEnderecosPopup","lotesEntradaPopup","enderecosPopup","enderecosEntrada"].forEach(id=>$(id).onclick=e=>{ if(e.target.id===id)$(id).classList.remove("open"); });
+attachDateMask("cadFabricacao"); attachDateMask("cadVencimento");
+$("startScannerCadastro").onclick=()=>scan($("readerCadastro"),$("cadCodigoBarras"),$("scanCadastroMsg"),s=>scannerCadastro=s,$("startScannerCadastro"));
+$("startScannerEntrada").onclick=()=>scan($("readerEntrada"),$("entNumero"),$("scanEntradaMsg"),s=>scannerEntrada=s,$("startScannerEntrada"));
+$("startScannerEstoque").onclick=()=>scan($("readerEstoque"),$("estNumero"),$("scanEstoqueMsg"),s=>scannerEstoque=s,$("startScannerEstoque"),consultarEstoque);
+$("startScanner").onclick=()=>scan($("reader"),$("produto"),$("scanMsg"),s=>scanner=s,$("startScanner"));
+</script>
+</body>
+</html>

@@ -7,50 +7,26 @@
   <script src="https://unpkg.com/html5-qrcode"></script>
   <style>
     :root { 
-      --bg: #f8fafc; 
-      --panel: #ffffff; 
-      --text: #0f172a; 
-      --muted: #64748b; 
-      --primary: #2563eb; 
-      --primary-hover: #1d4ed8;
-      --primary-light: #eff6ff;
-      --danger: #ef4444; 
-      --ok: #059669; 
-      --ok-light: #ecfdf5;
-      --border: #e2e8f0; 
-      --radius: 12px;
-      --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+      --bg: #f8fafc; --panel: #ffffff; --text: #0f172a; --muted: #64748b; 
+      --primary: #2563eb; --primary-hover: #1d4ed8; --primary-light: #eff6ff;
+      --danger: #ef4444; --ok: #059669; --ok-light: #ecfdf5; --border: #e2e8f0; 
+      --radius: 12px; --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
       --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.07), 0 2px 4px -1px rgba(0, 0, 0, 0.04);
       --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.08), 0 4px 6px -2px rgba(0, 0, 0, 0.03);
     }
     * { box-sizing: border-box; }
-    body { 
-      margin: 0; background: var(--bg); color: var(--text); 
-      font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; 
-      -webkit-font-smoothing: antialiased;
-    }
-    header { 
-      padding: 14px 20px; background: var(--panel); border-bottom: 1px solid var(--border); 
-      position: sticky; top: 0; z-index: 10; display: flex; justify-content: space-between; align-items: center; 
-      box-shadow: var(--shadow-sm);
-    }
+    body { margin: 0; background: var(--bg); color: var(--text); font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; -webkit-font-smoothing: antialiased; }
+    header { padding: 14px 20px; background: var(--panel); border-bottom: 1px solid var(--border); position: sticky; top: 0; z-index: 10; display: flex; justify-content: space-between; align-items: center; box-shadow: var(--shadow-sm); }
     .brand { display: flex; align-items: center; gap: 10px; }
-    .brand-logo { 
-      width: 32px; height: 32px; background: var(--primary); border-radius: 8px; 
-      display: flex; align-items: center; justify-content: center; color: #fff; font-weight: 800; font-size: 16px;
-    }
+    .brand-logo { width: 32px; height: 32px; background: var(--primary); border-radius: 8px; display: flex; align-items: center; justify-content: center; color: #fff; font-weight: 800; font-size: 16px; }
     header h1 { font-size: 18px; font-weight: 800; margin: 0; color: var(--text); letter-spacing: -0.02em; }
     .user-badge { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--muted); font-weight: 600; }
     .avatar { width: 28px; height: 28px; border-radius: 50%; background: #e2e8f0; display: flex; align-items: center; justify-content: center; color: var(--muted); font-weight: 700; font-size: 11px; }
 
     main { padding: 16px; max-width: 760px; margin: 0 auto; }
     
-    /* Dashboard KPIs */
     .kpi-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 20px; }
-    .kpi-card { 
-      background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius); 
-      padding: 12px; box-shadow: var(--shadow-sm); display: flex; flex-direction: column;
-    }
+    .kpi-card { background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius); padding: 12px; box-shadow: var(--shadow-sm); display: flex; flex-direction: column; }
     .kpi-label { font-size: 11px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.03em; }
     .kpi-value { font-size: 18px; font-weight: 800; color: var(--text); margin-top: 4px; }
     .kpi-sub { font-size: 10px; font-weight: 600; color: var(--ok); margin-top: 2px; }
@@ -62,31 +38,17 @@
 
     .nav-tabs { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 4px; margin-bottom: 12px; scrollbar-width: none; }
     .nav-tabs::-webkit-scrollbar { display: none; }
-    .tab-btn { 
-      width: auto; margin: 0; padding: 6px 14px; font-size: 12px; font-weight: 700; 
-      background: var(--panel); color: var(--muted); border: 1px solid var(--border); 
-      border-radius: 20px; white-space: nowrap; box-shadow: none; cursor: pointer;
-    }
+    .tab-btn { width: auto; margin: 0; padding: 6px 14px; font-size: 12px; font-weight: 700; background: var(--panel); color: var(--muted); border: 1px solid var(--border); border-radius: 20px; white-space: nowrap; box-shadow: none; cursor: pointer; }
     .tab-btn.active { background: var(--primary); color: #fff; border-color: var(--primary); }
 
-    section { 
-      background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius); 
-      padding: 18px; margin-bottom: 16px; box-shadow: var(--shadow-md);
-    }
+    section { background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius); padding: 18px; margin-bottom: 16px; box-shadow: var(--shadow-md); }
     h2 { font-size: 16px; font-weight: 700; margin: 0 0 14px; color: var(--text); }
     
     label { display: block; font-size: 13px; font-weight: 600; color: var(--muted); margin: 14px 0 6px; }
-    input { 
-      width: 100%; padding: 12px 14px; border: 1px solid var(--border); border-radius: var(--radius); 
-      font-size: 14px; background: #f8fafc; color: var(--text); transition: all 0.2s ease;
-    }
+    input { width: 100%; padding: 12px 14px; border: 1px solid var(--border); border-radius: var(--radius); font-size: 14px; background: #f8fafc; color: var(--text); transition: all 0.2s ease; }
     input:focus { outline: none; border-color: var(--primary); background: #fff; box-shadow: 0 0 0 3px rgba(37,99,235,0.1); }
 
-    button { 
-      width: 100%; border: 0; border-radius: var(--radius); padding: 12px 16px; margin-top: 10px; 
-      font-size: 14px; font-weight: 700; background: var(--primary); color: #fff; cursor: pointer;
-      box-shadow: var(--shadow-sm); transition: all 0.2s ease;
-    }
+    button { width: 100%; border: 0; border-radius: var(--radius); padding: 12px 16px; margin-top: 10px; font-size: 14px; font-weight: 700; background: var(--primary); color: #fff; cursor: pointer; box-shadow: var(--shadow-sm); transition: all 0.2s ease; }
     button:hover { background: var(--primary-hover); }
     button.secondary { background: #475569; }
     button.secondary:hover { background: #334155; }
@@ -102,25 +64,15 @@
     .process-group { margin-bottom: 20px; }
     .process-title { font-size: 11px; font-weight: 800; color: var(--muted); margin: 0 0 10px; text-transform: uppercase; letter-spacing: .08em; }
     
-    .menu-card { 
-      width: 100%; text-align: left; background: var(--panel); color: var(--text); 
-      border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; margin: 0; 
-      box-shadow: var(--shadow-sm); transition: all 0.2s ease; cursor: pointer; display: flex; align-items: center; gap: 14px;
-    }
+    .menu-card { width: 100%; text-align: left; background: var(--panel); color: var(--text); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; margin: 0; box-shadow: var(--shadow-sm); transition: all 0.2s ease; cursor: pointer; display: flex; align-items: center; gap: 14px; }
     .menu-card:hover { border-color: var(--primary); box-shadow: var(--shadow-md); transform: translateY(-2px); }
-    .card-icon { 
-      width: 42px; height: 42px; border-radius: 10px; background: var(--primary-light); 
-      display: flex; align-items: center; justify-content: center; color: var(--primary); flex-shrink: 0;
-    }
+    .card-icon { width: 42px; height: 42px; border-radius: 10px; background: var(--primary-light); display: flex; align-items: center; justify-content: center; color: var(--primary); flex-shrink: 0; }
     .card-body { flex: 1; }
     .card-header-line { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2px; }
     .menu-card strong { font-size: 15px; color: var(--text); font-weight: 700; }
     .menu-card span { color: var(--muted); font-size: 12px; font-weight: 500; display: block; line-height: 1.3; }
     
-    .badge { 
-      display: inline-block; padding: 2px 8px; border-radius: 999px; 
-      background: var(--primary-light); color: var(--primary); font-size: 10px; font-weight: 700; 
-    }
+    .badge { display: inline-block; padding: 2px 8px; border-radius: 999px; background: var(--primary-light); color: var(--primary); font-size: 10px; font-weight: 700; }
     
     .screen-title { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }
     .back-btn { width: auto; min-width: 90px; margin: 0; padding: 10px 14px; background: #475569; font-size: 13px; }
@@ -140,15 +92,9 @@
     
     #reader,#readerCadastro,#readerEntrada,#readerEstoque { width: 100%; overflow: hidden; border-radius: var(--radius); background: #000; margin-top: 10px; border: 1px solid var(--border); }
 
-    #enderecosEntrada.popup-panel {
-      display: none; position: fixed; inset: 0; z-index: 9999; padding: 16px; overflow-y: auto; 
-      background: rgba(15,23,42,0.6); backdrop-filter: blur(6px); align-items: center; justify-content: center;
-    }
+    #enderecosEntrada.popup-panel { display: none; position: fixed; inset: 0; z-index: 9999; padding: 16px; overflow-y: auto; background: rgba(15,23,42,0.6); backdrop-filter: blur(6px); align-items: center; justify-content: center; }
     #enderecosEntrada.popup-panel.open { display: flex !important; }
-    #enderecosEntrada .popup-content {
-      width: 100%; max-width: 520px; max-height: 85vh; overflow-y: auto; padding: 20px; 
-      margin: auto; border-radius: 16px; background: #fff; color: #0f172a;
-    }
+    #enderecosEntrada .popup-content { width: 100%; max-width: 520px; max-height: 85vh; overflow-y: auto; padding: 20px; margin: auto; border-radius: 16px; background: #fff; color: #0f172a; }
   </style>
 </head>
 <body>
@@ -165,9 +111,7 @@
 </header>
 
 <main>
-  <!-- DASHBOARD COM KPIS REAIS -->
   <div id="screen-menu" class="screen active">
-    
     <div class="kpi-grid">
       <div class="kpi-card">
         <span class="kpi-label">Ocupação</span>
@@ -210,7 +154,6 @@
             <span>Produto, lote, QC, datas e endereço inicial.</span>
           </div>
         </button>
-
         <button class="menu-card" data-screen="produtos">
           <div class="card-icon"><svg width="22" height="22" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg></div>
           <div class="card-body">
@@ -231,7 +174,13 @@
             <span>Adicionar saldo em endereço físico.</span>
           </div>
         </button>
-
+        <button class="menu-card" data-screen="transferencia">
+          <div class="card-icon"><svg width="22" height="22" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"></path></svg></div>
+          <div class="card-body">
+            <div class="card-header-line"><strong>Transferência</strong><span class="badge">Operação</span></div>
+            <span>Mover produtos entre endereços do armazém.</span>
+          </div>
+        </button>
         <button class="menu-card" data-screen="enderecos">
           <div class="card-icon"><svg width="22" height="22" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path></svg></div>
           <div class="card-body">
@@ -239,7 +188,6 @@
             <span>Gerenciar ocupação e limites do armazém.</span>
           </div>
         </button>
-
         <button class="menu-card" data-screen="estoque">
           <div class="card-icon"><svg width="22" height="22" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg></div>
           <div class="card-body">
@@ -275,10 +223,8 @@
         </button>
       </div>
     </div>
-
   </div>
 
-  <!-- DEMAIS TELAS DO SISTEMA -->
   <div id="screen-cadastro" class="screen">
     <div class="screen-title"><button class="back-btn" data-screen="menu">Voltar</button><h2>Cadastrar produto</h2></div>
     <section>
@@ -327,6 +273,20 @@
     </section>
   </div>
 
+  <div id="screen-transferencia" class="screen">
+    <div class="screen-title"><button class="back-btn" data-screen="menu">Voltar</button><h2>Transferência</h2></div>
+    <section>
+      <h2>Mover Produto entre Endereços</h2>
+      <label>Número do produto</label><input id="transfNumero" inputmode="numeric" placeholder="Ex.: 3000281">
+      <label>Lote</label><input id="transfLote" inputmode="numeric" placeholder="Ex.: 30010281">
+      <label>Endereço de Origem atual</label><input id="transfOrigem" placeholder="Ex.: B1-001-1">
+      <label>Endereço de Destino novo</label><input id="transfDestino" placeholder="Ex.: B2-003-1">
+      <label>Quantidade a transferir</label><input id="transfQuantidade" inputmode="numeric" placeholder="Ex.: 50">
+      <button id="salvarTransferencia">Confirmar Transferência</button>
+      <div id="transfMsg" class="msg"></div>
+    </section>
+  </div>
+
   <div id="screen-enderecos" class="screen">
     <div class="screen-title"><button class="back-btn" data-screen="menu">Voltar</button><h2>Endereços e capacidade</h2></div>
     <section><h2>Cadastrar / Ajustar Endereço</h2><label>Endereço</label><input id="endCodigo" placeholder="Ex.: A01-R01-N01"><label>Limite máximo em unidades</label><input id="endCapacidade" inputmode="numeric" placeholder="Ex.: 12000"><button id="salvarEndereco">Salvar endereço</button><div id="endMsg" class="msg"></div></section>
@@ -372,36 +332,27 @@ function call(name, payload="") {
   return data; 
 }
 
-/* CARREGAR DADOS REAIS DO SQLITE PARA OS KPIS */
 function atualizarDashboardKPIs() {
   try {
     const dadosEnderecos = call("listarEnderecos", "false");
     const itensEnderecos = dadosEnderecos.itens || [];
-    
-    let totalCapacidade = 0;
-    let totalOcupado = 0;
-    let enderecosDisponiveis = 0;
+    let totalCapacidade = 0, totalOcupado = 0, enderecosDisponiveis = 0;
 
     itensEnderecos.forEach(end => {
       const cap = Number(end.capacidade_maxima || 0);
       const ocu = Number(end.ocupado || 0);
       totalCapacidade += cap;
       totalOcupado += ocu;
-      if (Number(end.disponivel || 0) > 0) {
-        enderecosDisponiveis++;
-      }
+      if (Number(end.disponivel || 0) > 0) enderecosDisponiveis++;
     });
 
     const taxaOcupacao = totalCapacidade > 0 ? Math.round((totalOcupado / totalCapacidade) * 100) : 0;
-    
     $("kpiOcupacao").textContent = `${taxaOcupacao}%`;
     $("kpiOcupacaoSub").textContent = `${totalOcupado} / ${totalCapacidade} un`;
     $("kpiEnderecos").textContent = enderecosDisponiveis;
 
     const dadosMov = call("listarMovimentacoes", "");
-    const itensMov = dadosMov.itens || [];
-    $("kpiMovs").textContent = itensMov.length;
-
+    $("kpiMovs").textContent = (dadosMov.itens || []).length;
   } catch (e) {
     $("kpiOcupacao").textContent = "0%";
     $("kpiEnderecos").textContent = "0";
@@ -412,21 +363,15 @@ function atualizarDashboardKPIs() {
 function filtrarAba(grupo, btn) {
   document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
   btn.classList.add("active");
-
   document.querySelectorAll(".process-group").forEach(g => {
-    if (grupo === "todos" || g.dataset.group === grupo) {
-      g.style.display = "block";
-    } else {
-      g.style.display = "none";
-    }
+    g.style.display = (grupo === "todos" || g.dataset.group === grupo) ? "block" : "none";
   });
 }
 
 function filtrarDashboard() {
   const termo = $("dashSearch").value.toLowerCase();
   document.querySelectorAll(".menu-card").forEach(card => {
-    const texto = card.textContent.toLowerCase();
-    card.style.display = texto.includes(termo) ? "flex" : "none";
+    card.style.display = card.textContent.toLowerCase().includes(termo) ? "flex" : "none";
   });
 }
 
@@ -437,48 +382,29 @@ function limparTelaOperacional(){
     "cadMsg","scanCadastroMsg","cadEnderecosLista", "produtosResultado",
     "entMsg","scanEntradaMsg","lotesEntradaLista","enderecosEntradaResultado",
     "endMsg","enderecosResultado", "endDetalheResumo","endDetalheMsg",
-    "scanEstoqueMsg","estoqueResultado", "scanMsg","resultado","confirmItens","confirmMsg", "movResultado"
+    "scanEstoqueMsg","estoqueResultado", "scanMsg","resultado","confirmItens","confirmMsg", "movResultado", "transfMsg"
   ].forEach(id=>{
     const el=$(id);
-    if(el){
-      el.innerHTML="";
-      if(el.classList.contains("msg")) el.className="msg";
-    }
+    if(el){ el.innerHTML=""; if(el.classList.contains("msg")) el.className="msg"; }
   });
 
   if($("confirmBox")) $("confirmBox").style.display="none";
   if($("confirmar")) $("confirmar").disabled=false;
   if($("cancelar")) $("cancelar").disabled=false;
-
-  currentPreview=null;
-  enderecoDetalheAtual=null;
-  enderecosCache=[];
+  currentPreview=null; enderecoDetalheAtual=null; enderecosCache=[];
 
   ["reader","readerCadastro","readerEntrada","readerEstoque"].forEach(id=>{
-    const el=$(id);
-    if(el) el.innerHTML="";
+    const el=$(id); if(el) el.innerHTML="";
   });
 
-  [
-    ["scanner", s=>scanner=s],
-    ["scannerCadastro", s=>scannerCadastro=s],
-    ["scannerEntrada", s=>scannerEntrada=s],
-    ["scannerEstoque", s=>scannerEstoque=s]
-  ].forEach(([nome,atribuir])=>{
+  [ ["scanner", s=>scanner=s], ["scannerCadastro", s=>scannerCadastro=s], ["scannerEntrada", s=>scannerEntrada=s], ["scannerEstoque", s=>scannerEstoque=s] ].forEach(([nome,atribuir])=>{
     const sc=({ scanner, scannerCadastro, scannerEntrada, scannerEstoque })[nome];
-    if(sc){
-      atribuir(null);
-      try{ sc.stop().then(()=>{ try{sc.clear();}catch(e){} }).catch(()=>{ try{sc.clear();}catch(e){} }); }catch(e){}
-    }
+    if(sc){ atribuir(null); try{ sc.stop().then(()=>{ try{sc.clear();}catch(e){} }).catch(()=>{ try{sc.clear();}catch(e){} }); }catch(e){} }
   });
 }
 
 function showScreen(name){
-  if(name==="menu") {
-    limparTelaOperacional();
-    atualizarDashboardKPIs();
-  }
-
+  if(name==="menu") { limparTelaOperacional(); atualizarDashboardKPIs(); }
   document.querySelectorAll(".screen").forEach(e=>e.classList.remove("active"));
   const destino=$(`screen-${name}`);
   if(!destino) return;
@@ -492,33 +418,13 @@ function dateMask(v){ const d=String(v||"").replace(/\D/g,"").slice(0,8); if(d.l
 function attachDateMask(id){ $(id).addEventListener("input",()=>$(id).value=dateMask($(id).value)); }
 let contextoAudioMyStock=null;
 function prepararAudioMyStock(){
-  try{
-    const AudioCtx=window.AudioContext||window.webkitAudioContext;
-    if(!AudioCtx)return;
-    if(!contextoAudioMyStock)contextoAudioMyStock=new AudioCtx();
-    if(contextoAudioMyStock.state==="suspended")contextoAudioMyStock.resume();
-  }catch(e){}
+  try{ const AudioCtx=window.AudioContext||window.webkitAudioContext; if(!AudioCtx)return; if(!contextoAudioMyStock)contextoAudioMyStock=new AudioCtx(); if(contextoAudioMyStock.state==="suspended")contextoAudioMyStock.resume(); }catch(e){}
 }
 function bipLeituraMyStock(){
-  try{
-    prepararAudioMyStock();
-    if(!contextoAudioMyStock)return;
-    const ctx=contextoAudioMyStock;
-    const oscilador=ctx.createOscillator();
-    const volume=ctx.createGain();
-    oscilador.type="sine";
-    oscilador.frequency.setValueAtTime(1800,ctx.currentTime);
-    volume.gain.setValueAtTime(0.0001,ctx.currentTime);
-    volume.gain.exponentialRampToValueAtTime(0.25,ctx.currentTime+0.015);
-    volume.gain.exponentialRampToValueAtTime(0.0001,ctx.currentTime+0.13);
-    oscilador.connect(volume);
-    volume.connect(ctx.destination);
-    oscilador.start(ctx.currentTime);
-    oscilador.stop(ctx.currentTime+0.14);
-  }catch(e){}
+  try{ prepararAudioMyStock(); if(!contextoAudioMyStock)return; const ctx=contextoAudioMyStock; const oscilador=ctx.createOscillator(); const volume=ctx.createGain(); oscilador.type="sine"; oscilador.frequency.setValueAtTime(1800,ctx.currentTime); volume.gain.setValueAtTime(0.0001,ctx.currentTime); volume.gain.exponentialRampToValueAtTime(0.25,ctx.currentTime+0.015); volume.gain.exponentialRampToValueAtTime(0.0001,ctx.currentTime+0.13); oscilador.connect(volume); volume.connect(ctx.destination); oscilador.start(ctx.currentTime); oscilador.stop(ctx.currentTime+0.14); }catch(e){}
 }
 function formats(){ return window.Html5QrcodeSupportedFormats ? [Html5QrcodeSupportedFormats.QR_CODE,Html5QrcodeSupportedFormats.CODE_128,Html5QrcodeSupportedFormats.CODE_39,Html5QrcodeSupportedFormats.EAN_13,Html5QrcodeSupportedFormats.EAN_8,Html5QrcodeSupportedFormats.ITF] : undefined; }
-async function scan(targetReader,targetInput,targetMsg,scannerSetter,startButton,after){ prepararAudioMyStock(); clearMsg(targetMsg); if(!window.Html5Qrcode){ showMsg(targetMsg,"Leitor não carregou. Verifique a internet.",false); return; } const sc=new Html5Qrcode(targetReader.id); scannerSetter(sc); try{ await sc.start({facingMode:"environment"},{fps:10,qrbox:{width:240,height:160},formatsToSupport:formats()},async text=>{ bipLeituraMyStock(); targetInput.value=String(text||"").trim(); showMsg(targetMsg,`Código lido: ${targetInput.value}`,true); await sc.stop(); sc.clear(); startButton.disabled=false; scannerSetter(null); if(after) after(); }); startButton.disabled=true; }catch(e){ showMsg(targetMsg,"Não consegui abrir a câmera. Permita o acesso à câmera.",false); startButton.disabled=false; scannerSetter(null); } }
+async function scan(targetReader,targetInput,targetMsg,scannerSetter,startButton,after){ prepararAudioMyStock(); clearMsg(targetMsg); if(!window.Html5Qrcode){ showMsg(targetMsg,"Leitor não carregou.",false); return; } const sc=new Html5Qrcode(targetReader.id); scannerSetter(sc); try{ await sc.start({facingMode:"environment"},{fps:10,qrbox:{width:240,height:160},formatsToSupport:formats()},async text=>{ bipLeituraMyStock(); targetInput.value=String(text||"").trim(); showMsg(targetMsg,`Código lido: ${targetInput.value}`,true); await sc.stop(); sc.clear(); startButton.disabled=false; scannerSetter(null); if(after) after(); }); startButton.disabled=true; }catch(e){ showMsg(targetMsg,"Erro ao abrir a câmera.",false); startButton.disabled=false; scannerSetter(null); } }
 function renderItems(container, itens, tpl, empty="Nenhum registro encontrado."){ container.innerHTML = itens.length ? itens.map(tpl).join("") : `<div class="msg err">${empty}</div>`; }
 
 function salvarCadastro(){ clearMsg($("cadMsg")); try{ const data=call("salvarProduto",{numero:$("cadNumero").value.trim(),codigo_barras:$("cadCodigoBarras").value.trim(),nome:$("cadNome").value.trim(),lote:$("cadLote").value.trim(),unidades_por_caixa:parseInt($("cadQc").value,10),fabricacao:$("cadFabricacao").value.trim(),vencimento:$("cadVencimento").value.trim(),endereco:$("cadEndereco").value.trim().toUpperCase(),quantidade_entrada:parseInt($("cadQuantidadeEntrada").value||"0",10)}); showMsg($("cadMsg"),data.message,true); }catch(e){ showMsg($("cadMsg"),e.message,false); } }
@@ -531,15 +437,24 @@ function abrirEnderecosCadastro(){ $("cadEnderecosPopup").classList.add("open");
 function consultarEnderecos(disponiveis = false) {
   const popup = disponiveis ? $("enderecosEntrada") : $("enderecosPopup");
   const container = disponiveis ? $("enderecosEntradaResultado") : $("enderecosResultado");
-
   if (popup) popup.classList.add("open");
   if (container) container.innerHTML = `<div class="msg">Carregando endereços...</div>`;
+  try { const data = call("listarEnderecos", disponiveis ? "true" : "false"); renderEnderecos(container, data.itens || [], disponiveis); } catch (e) { if (container) container.innerHTML = `<div class="msg err">${esc(e.message)}</div>`; }
+}
 
+function salvarTransferencia() {
+  clearMsg($("transfMsg"));
   try {
-    const data = call("listarEnderecos", disponiveis ? "true" : "false");
-    renderEnderecos(container, data.itens || [], disponiveis);
+    const data = call("transferirEstoque", {
+      numero: $("transfNumero").value.trim(),
+      lote: $("transfLote").value.trim(),
+      origem: $("transfOrigem").value.trim().toUpperCase(),
+      destino: $("transfDestino").value.trim().toUpperCase(),
+      quantidade: parseInt($("transfQuantidade").value, 10)
+    });
+    showMsg($("transfMsg"), data.message, true);
   } catch (e) {
-    if (container) container.innerHTML = `<div class="msg err">${esc(e.message)}</div>`;
+    showMsg($("transfMsg"), e.message, false);
   }
 }
 
@@ -553,6 +468,7 @@ function consultarMovimentacoes(){ try{ const data=call("listarMovimentacoes",$(
 
 document.querySelectorAll("[data-screen]").forEach(b=>b.onclick=()=>showScreen(b.dataset.screen));
 $("salvarCadastro").onclick=salvarCadastro; $("consultarProdutos").onclick=consultarProdutos; $("salvarEntrada").onclick=salvarEntrada; $("abrirLotesEntrada").onclick=abrirLotesEntrada; $("salvarEndereco").onclick=salvarEndereco; $("salvarEnderecoDetalhe").onclick=salvarEnderecoDetalhe; $("consultarEnderecos").onclick=()=>consultarEnderecos(false); $("verEnderecosEntrada").onclick=()=>consultarEnderecos(true); $("consultarEstoque").onclick=consultarEstoque; $("buscar").onclick=buscarOrientacao; $("confirmar").onclick=confirmarSeparacao; $("cancelar").onclick=()=>{$("confirmBox").style.display="none";$("resultado").innerHTML="";}; $("consultarMovimentacoes").onclick=consultarMovimentacoes;
+$("salvarTransferencia").onclick = salvarTransferencia;
 $("abrirEnderecosCadastro").onclick=abrirEnderecosCadastro; $("fecharEnderecosCadastro").onclick=()=>$("cadEnderecosPopup").classList.remove("open"); $("fecharLotesEntrada").onclick=()=>$("lotesEntradaPopup").classList.remove("open"); $("fecharEnderecosPopup").onclick=()=>$("enderecosPopup").classList.remove("open"); $("fecharEnderecosEntradaPopup").onclick=()=>$("enderecosEntrada").classList.remove("open");
 ["cadEnderecosPopup","lotesEntradaPopup","enderecosPopup","enderecosEntrada"].forEach(id=>$(id).onclick=e=>{ if(e.target.id===id)$(id).classList.remove("open"); });
 attachDateMask("cadFabricacao"); attachDateMask("cadVencimento");
@@ -561,9 +477,7 @@ $("startScannerEntrada").onclick=()=>scan($("readerEntrada"),$("entNumero"),$("s
 $("startScannerEstoque").onclick=()=>scan($("readerEstoque"),$("estNumero"),$("scanEstoqueMsg"),s=>scannerEstoque=s,$("startScannerEstoque"),consultarEstoque);
 $("startScanner").onclick=()=>scan($("reader"),$("produto"),$("scanMsg"),s=>scanner=s,$("startScanner"));
 
-window.addEventListener("DOMContentLoaded", () => {
-  atualizarDashboardKPIs();
-});
+window.addEventListener("DOMContentLoaded", () => { atualizarDashboardKPIs(); });
 </script>
 </body>
 </html>
