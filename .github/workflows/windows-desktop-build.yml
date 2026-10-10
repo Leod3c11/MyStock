@@ -1,0 +1,40 @@
+name: Build MyStock Windows EXE
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - feature/electron-windows-desktop
+    paths:
+      - "mystock_desktop/**"
+      - ".github/workflows/windows-desktop-build.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    defaults:
+      run:
+        working-directory: mystock_desktop
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: mystock_desktop/package.json
+      - name: Install dependencies
+        run: npm install
+      - name: Build Windows installer
+        run: npm run dist:win
+      - name: Upload installer
+        uses: actions/upload-artifact@v4
+        with:
+          name: MyStock-Windows-Installer
+          path: mystock_desktop/dist/*.exe
+          if-no-files-found: error
+          retention-days: 14
