@@ -369,7 +369,8 @@
 
 <script>
 let scanner=null, scannerCadastro=null, scannerEntrada=null, scannerEstoque=null;
-let currentPreview=null, enderecosCache=[], enderecoDetalheAtual=null;\nlet androidAutenticado=false, androidUsuario=null;
+let currentPreview=null, enderecosCache=[], enderecoDetalheAtual=null;
+let androidAutenticado=false, androidUsuario=null;
 const $ = id => document.getElementById(id);
 const esc = v => String(v ?? "").replace(/[&<>"']/g, ch => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[ch]));
 
@@ -421,7 +422,8 @@ function sairAndroid() {
   $("loginPassword").value="";
   mensagemLogin("Sessão encerrada.",true);
 }
-\n/* CARREGAR DADOS REAIS DO SERVIDOR CENTRAL PARA OS KPIS */
+
+/* CARREGAR DADOS REAIS DO SERVIDOR CENTRAL PARA OS KPIS */
 function atualizarDashboardKPIs() {
   try {
     const dadosEnderecos = call("listarEnderecos", "false");
