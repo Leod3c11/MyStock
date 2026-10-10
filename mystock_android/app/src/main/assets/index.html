@@ -43,7 +43,7 @@
     .popup-content { max-width:680px; margin:42px auto; padding:14px; border-radius:8px; background:var(--panel); box-shadow:0 14px 40px rgba(0,0,0,.24); }
     #reader,#readerCadastro,#readerEntrada,#readerEstoque { width:100%; overflow:hidden; border-radius:8px; background:#000; }
 
-    /* Correção do popup de endereços da entrada */
+    /* Correção forçada do popup de endereços da entrada */
     #enderecosEntrada.popup-panel {
       display: none;
       position: fixed;
@@ -183,7 +183,15 @@ let scanner=null, scannerCadastro=null, scannerEntrada=null, scannerEstoque=null
 let currentPreview=null, enderecosCache=[], enderecoDetalheAtual=null;
 const $ = id => document.getElementById(id);
 const esc = v => String(v ?? "").replace(/[&<>"']/g, ch => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[ch]));
-function call(name, payload="") { const raw = typeof payload === "string" ? window.MyStock[name](payload) : window.MyStock[name](JSON.stringify(payload)); const data = JSON.parse(raw); if (!data.ok) throw new Error(data.error || "Falha na operação."); return data; }
+function call(name, payload="") { 
+  if (!window.MyStock || typeof window.MyStock[name] !== "function") {
+    throw new Error(`Função ${name} não encontrada no ambiente MyStock.`);
+  }
+  const raw = typeof payload === "string" ? window.MyStock[name](payload) : window.MyStock[name](JSON.stringify(payload)); 
+  const data = JSON.parse(raw); 
+  if (!data.ok) throw new Error(data.error || "Falha na operação."); 
+  return data; 
+}
 function limparTelaOperacional(){
   document.querySelectorAll(".popup-panel").forEach(el=>el.classList.remove("open"));
 
@@ -194,7 +202,7 @@ function limparTelaOperacional(){
   [
     "cadMsg","scanCadastroMsg","cadEnderecosLista",
     "produtosResultado",
-    "entMsg","scanEntradaMsg","lotesEntradaLista","enderecosEntrada",
+    "entMsg","scanEntradaMsg","lotesEntradaLista","enderecosEntradaResultado",
     "endMsg","enderecosResultado",
     "endDetalheResumo","endDetalheMsg",
     "scanEstoqueMsg","estoqueResultado",
@@ -295,21 +303,31 @@ function salvarEntrada(){ clearMsg($("entMsg")); try{ const data=call("registrar
 function abrirLotesEntrada(){ clearMsg($("entMsg")); const produto=$("entNumero").value.trim(); if(!produto){ showMsg($("entMsg"),"Informe o produto antes de selecionar o lote.",false); return; } $("lotesEntradaPopup").classList.add("open"); try{ const data=call("listarLotes",produto); renderItems($("lotesEntradaLista"),data.itens,item=>`<div class="item"><div class="line"><b>${esc(item.numero)} - ${esc(item.nome)}</b></div><div class="line"><b>Lote:</b> ${esc(item.lote)}</div><div class="line"><b>QC:</b> ${esc(item.unidades_por_caixa)}</div><div class="line"><b>Fabricação:</b> ${esc(item.fabricacao)}</div><div class="line"><b>Vencimento:</b> ${esc(item.vencimento)}</div><button class="secondary escolher-lote" data-lote="${esc(item.lote)}">Usar este lote</button></div>`); document.querySelectorAll(".escolher-lote").forEach(b=>b.onclick=()=>{ $("entLote").value=b.dataset.lote; $("lotesEntradaPopup").classList.remove("open"); showMsg($("entMsg"),`Lote selecionado: ${b.dataset.lote}`,true); }); }catch(e){ $("lotesEntradaLista").innerHTML=`<div class="msg err">${esc(e.message)}</div>`; } }
 function renderEnderecos(container,itens,selectable=false){ renderItems(container,itens,(item,idx)=>`<div class="item"><div class="line"><b>Endereço:</b> ${esc(item.codigo)}</div><div class="line"><b>Ocupado:</b> ${esc(item.ocupado)}</div><div class="line"><b>Limite:</b> ${esc(item.capacidade_maxima)}</div><div class="line strong">Disponível: ${esc(item.disponivel)}</div>${selectable?`<button class="secondary escolher-endereco" data-codigo="${esc(item.codigo)}">Usar este endereço</button>`:`<button class="secondary editar-endereco" data-index="${idx}">Abrir / editar capacidade</button>`}</div>`); if(selectable){ document.querySelectorAll(".escolher-endereco").forEach(b=>b.onclick=()=>{ $("entEndereco").value=b.dataset.codigo; $("enderecosEntrada").classList.remove("open"); showMsg($("entMsg"),`Endereço selecionado: ${b.dataset.codigo}`,true); }); } else { enderecosCache=itens; document.querySelectorAll(".editar-endereco").forEach(b=>b.onclick=()=>{ $("enderecosPopup").classList.remove("open"); abrirDetalheEndereco(enderecosCache[parseInt(b.dataset.index,10)]); }); } }
 function abrirEnderecosCadastro(){ $("cadEnderecosPopup").classList.add("open"); try{ const data=call("listarEnderecos","true"); renderItems($("cadEnderecosLista"),data.itens,item=>`<div class="item"><div class="line"><b>Endereço:</b> ${esc(item.codigo)}</div><div class="line strong">Disponível: ${esc(item.disponivel)}</div><button class="secondary cad-end" data-codigo="${esc(item.codigo)}">Usar este endereço</button></div>`); document.querySelectorAll(".cad-end").forEach(b=>b.onclick=()=>{ $("cadEndereco").value=b.dataset.codigo; $("cadEnderecosPopup").classList.remove("open"); showMsg($("cadMsg"),`Endereço selecionado: ${b.dataset.codigo}`,true); }); }catch(e){ $("cadEnderecosLista").innerHTML=`<div class="msg err">${esc(e.message)}</div>`; } }
+
+// FORÇANDO A ABERTURA DO POPUP ANTES DA CHAMADA DA API
 function consultarEnderecos(disponiveis = false) {
   const popup = disponiveis ? $("enderecosEntrada") : $("enderecosPopup");
   const container = disponiveis ? $("enderecosEntradaResultado") : $("enderecosResultado");
 
+  // Garante a abertura imediata na tela
   if (popup) {
     popup.classList.add("open");
   }
 
+  if (container) {
+    container.innerHTML = `<div class="msg">Carregando endereços...</div>`;
+  }
+
   try {
     const data = call("listarEnderecos", disponiveis ? "true" : "false");
-    renderEnderecos(container, data.itens, disponiveis);
+    renderEnderecos(container, data.itens || [], disponiveis);
   } catch (e) {
-    container.innerHTML = `<div class="msg err">${esc(e.message)}</div>`;
+    if (container) {
+      container.innerHTML = `<div class="msg err">${esc(e.message)}</div>`;
+    }
   }
 }
+
 function salvarEndereco(){ clearMsg($("endMsg")); try{ const data=call("salvarEndereco",{codigo:$("endCodigo").value.trim().toUpperCase(),capacidade_maxima:parseInt($("endCapacidade").value,10)}); showMsg($("endMsg"),data.message,true); }catch(e){ showMsg($("endMsg"),e.message,false); } }
 function abrirDetalheEndereco(item){ enderecoDetalheAtual=item; clearMsg($("endDetalheMsg")); $("endDetalheCapacidade").value=item.capacidade_maxima; $("endDetalheResumo").innerHTML=`<div class="item"><div class="line"><b>Endereço:</b> ${esc(item.codigo)}</div><div class="line"><b>Ocupado:</b> ${esc(item.ocupado)}</div><div class="line"><b>Capacidade atual:</b> ${esc(item.capacidade_maxima)}</div><div class="line strong">Disponível: ${esc(item.disponivel)}</div></div>`; showScreen("endereco-detalhe"); }
 function salvarEnderecoDetalhe(){ if(!enderecoDetalheAtual)return; clearMsg($("endDetalheMsg")); try{ const data=call("salvarEndereco",{codigo:enderecoDetalheAtual.codigo,capacidade_maxima:parseInt($("endDetalheCapacidade").value,10)}); showMsg($("endDetalheMsg"),data.message,true); }catch(e){ showMsg($("endDetalheMsg"),e.message,false); } }
