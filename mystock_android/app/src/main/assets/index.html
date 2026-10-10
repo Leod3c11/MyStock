@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>MyStock - WMS Mobile</title>
+  <title>MyStock - WMS Professional</title>
   <script src="https://unpkg.com/html5-qrcode"></script>
   <style>
     :root { 
@@ -13,11 +13,17 @@
       --muted: #64748b; 
       --primary: #2563eb; 
       --primary-hover: #1d4ed8;
+      --primary-light: #eff6ff;
       --danger: #ef4444; 
       --ok: #059669; 
+      --ok-light: #ecfdf5;
+      --warning: #d97706;
+      --warning-light: #fffbeb;
       --border: #e2e8f0; 
       --radius: 12px;
-      --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+      --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+      --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.07), 0 2px 4px -1px rgba(0, 0, 0, 0.04);
+      --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.08), 0 4px 6px -2px rgba(0, 0, 0, 0.03);
     }
     * { box-sizing: border-box; }
     body { 
@@ -27,71 +33,112 @@
       font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; 
       -webkit-font-smoothing: antialiased;
     }
+    
+    /* Top Header Corporativo */
     header { 
-      padding: 18px 20px; 
+      padding: 14px 20px; 
       background: var(--panel); 
       border-bottom: 1px solid var(--border); 
       position: sticky; 
       top: 0; 
-      z-index: 5; 
-      box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+      z-index: 10; 
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      box-shadow: var(--shadow-sm);
     }
-    header h1 { font-size: 20px; font-weight: 800; margin: 0; color: var(--primary); letter-spacing: -0.03em; }
-    main { padding: 16px; max-width: 720px; margin: 0 auto; }
+    .brand { display: flex; align-items: center; gap: 10px; }
+    .brand-logo { 
+      width: 32px; height: 32px; background: var(--primary); 
+      border-radius: 8px; display: flex; align-items: center; 
+      justify-content: center; color: #fff; font-weight: 800; font-size: 16px;
+    }
+    header h1 { font-size: 18px; font-weight: 800; margin: 0; color: var(--text); letter-spacing: -0.02em; }
+    .user-badge { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--muted); font-weight: 600; }
+    .avatar { width: 28px; height: 28px; border-radius: 50%; background: #e2e8f0; display: flex; align-items: center; justify-content: center; color: var(--muted); font-weight: 700; font-size: 11px; }
+
+    main { padding: 16px; max-width: 760px; margin: 0 auto; }
     
+    /* Dashboard KPIs */
+    .kpi-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 20px; }
+    .kpi-card { 
+      background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius); 
+      padding: 12px; box-shadow: var(--shadow-sm); display: flex; flex-direction: column;
+    }
+    .kpi-label { font-size: 11px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.03em; }
+    .kpi-value { font-size: 18px; font-weight: 800; color: var(--text); margin-top: 4px; }
+    .kpi-sub { font-size: 10px; font-weight: 600; color: var(--ok); margin-top: 2px; }
+
+    /* Barra de Busca de Módulos e Filtros */
+    .dashboard-controls { margin-bottom: 16px; }
+    .search-bar { position: relative; margin-bottom: 12px; }
+    .search-bar input { padding-left: 38px; }
+    .search-icon { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--muted); width: 16px; height: 16px; }
+
+    .nav-tabs { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 4px; margin-bottom: 12px; scrollbar-width: none; }
+    .nav-tabs::-webkit-scrollbar { display: none; }
+    .tab-btn { 
+      width: auto; margin: 0; padding: 6px 14px; font-size: 12px; font-weight: 700; 
+      background: var(--panel); color: var(--muted); border: 1px solid var(--border); 
+      border-radius: 20px; white-space: nowrap; box-shadow: none;
+    }
+    .tab-btn.active { background: var(--primary); color: #fff; border-color: var(--primary); }
+
+    /* Estilização Geral de Seções */
     section { 
       background: var(--panel); 
       border: 1px solid var(--border); 
       border-radius: var(--radius); 
       padding: 18px; 
       margin-bottom: 16px; 
-      box-shadow: var(--shadow);
+      box-shadow: var(--shadow-md);
     }
-    h2 { font-size: 16px; font-weight: 700; margin: 0 0 14px; color: var(--text); letter-spacing: -0.01em; }
+    h2 { font-size: 16px; font-weight: 700; margin: 0 0 14px; color: var(--text); }
     
     label { display: block; font-size: 13px; font-weight: 600; color: var(--muted); margin: 14px 0 6px; }
     input { 
       width: 100%; 
-      padding: 13px 15px; 
+      padding: 12px 14px; 
       border: 1px solid var(--border); 
       border-radius: var(--radius); 
-      font-size: 15px; 
+      font-size: 14px; 
       background: #f8fafc;
       color: var(--text);
       transition: all 0.2s ease;
     }
-    input:focus { outline: none; border-color: var(--primary); background: #fff; box-shadow: 0 0 0 4px rgba(37,99,235,0.08); }
+    input:focus { outline: none; border-color: var(--primary); background: #fff; box-shadow: 0 0 0 3px rgba(37,99,235,0.1); }
 
     button { 
       width: 100%; 
       border: 0; 
       border-radius: var(--radius); 
-      padding: 13px 16px; 
-      margin-top: 12px; 
-      font-size: 15px; 
+      padding: 12px 16px; 
+      margin-top: 10px; 
+      font-size: 14px; 
       font-weight: 700; 
       background: var(--primary); 
       color: #fff; 
       cursor: pointer;
-      box-shadow: 0 2px 4px rgba(37,99,235,0.15);
+      box-shadow: var(--shadow-sm);
       transition: all 0.2s ease;
     }
-    button:hover { background: var(--primary-hover); transform: translateY(-1px); box-shadow: 0 4px 8px rgba(37,99,235,0.25); }
-    button:active { transform: translateY(0); }
-    button.secondary { background: #475569; box-shadow: 0 2px 4px rgba(71,85,105,0.15); }
+    button:hover { background: var(--primary-hover); }
+    button.secondary { background: #475569; }
     button.secondary:hover { background: #334155; }
-    button.danger { background: var(--danger); box-shadow: 0 2px 4px rgba(239,68,68,0.15); }
+    button.danger { background: var(--danger); }
     button.danger:hover { background: #dc2626; }
-    button:disabled { opacity: .55; cursor: not-allowed; box-shadow: none; transform: none; }
+    button:disabled { opacity: .55; cursor: not-allowed; box-shadow: none; }
 
-    .screen { display: none; animation: fadeIn 0.25s cubic-bezier(0.16, 1, 0.3, 1); }
+    .screen { display: none; animation: fadeIn 0.2s ease; }
     .screen.active { display: block; }
-    @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
 
-    .menu-grid { display: grid; gap: 10px; }
-    .process-group { margin-bottom: 18px; }
-    .process-title { font-size: 11px; font-weight: 800; color: var(--muted); margin: 16px 0 8px; text-transform: uppercase; letter-spacing: .08em; }
+    /* Grid do Menu Renovado */
+    .menu-grid { display: grid; gap: 12px; }
+    .process-group { margin-bottom: 20px; }
+    .process-title { font-size: 11px; font-weight: 800; color: var(--muted); margin: 0 0 10px; text-transform: uppercase; letter-spacing: .08em; }
     
+    /* Card de Menu Profissional */
     .menu-card { 
       width: 100%; 
       text-align: left; 
@@ -101,41 +148,52 @@
       border-radius: var(--radius); 
       padding: 16px; 
       margin: 0; 
-      box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+      box-shadow: var(--shadow-sm);
       transition: all 0.2s ease;
       cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 14px;
     }
-    .menu-card:hover { border-color: var(--primary); box-shadow: 0 6px 16px rgba(37,99,235,0.08); transform: translateY(-2px); }
-    .menu-card strong { display: block; font-size: 15px; margin-bottom: 4px; color: var(--text); font-weight: 700; }
-    .menu-card span { color: var(--muted); font-size: 12px; font-weight: 500; line-height: 1.4; }
+    .menu-card:hover { 
+      border-color: var(--primary); 
+      box-shadow: var(--shadow-md); 
+      transform: translateY(-2px); 
+    }
+    .card-icon { 
+      width: 42px; height: 42px; border-radius: 10px; background: var(--primary-light); 
+      display: flex; align-items: center; justify-content: center; color: var(--primary); flex-shrink: 0;
+    }
+    .card-body { flex: 1; }
+    .card-header-line { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2px; }
+    .menu-card strong { font-size: 15px; color: var(--text); font-weight: 700; }
+    .menu-card span { color: var(--muted); font-size: 12px; font-weight: 500; display: block; line-height: 1.3; }
     
     .badge { 
       display: inline-block; 
-      padding: 3px 10px; 
+      padding: 2px 8px; 
       border-radius: 999px; 
-      background: #eff6ff; 
-      color: #1d4ed8; 
-      font-size: 11px; 
+      background: var(--primary-light); 
+      color: var(--primary); 
+      font-size: 10px; 
       font-weight: 700; 
-      margin-bottom: 8px; 
-      letter-spacing: 0.02em;
     }
     
     .screen-title { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }
-    .back-btn { width: auto; min-width: 90px; margin: 0; padding: 10px 16px; background: #475569; font-size: 14px; }
+    .back-btn { width: auto; min-width: 90px; margin: 0; padding: 10px 14px; background: #475569; font-size: 13px; }
     .screen-title h2 { margin: 0; font-size: 18px; font-weight: 700; }
     
-    .msg { padding: 14px; border-radius: var(--radius); margin-top: 14px; display: none; font-size: 14px; font-weight: 500; white-space: pre-wrap; line-height: 1.4; }
-    .msg.ok { display: block; background: #ecfdf5; color: #065f46; border: 1px solid #a7f3d0; }
+    .msg { padding: 12px 14px; border-radius: var(--radius); margin-top: 12px; display: none; font-size: 13px; font-weight: 500; white-space: pre-wrap; }
+    .msg.ok { display: block; background: var(--ok-light); color: #065f46; border: 1px solid #a7f3d0; }
     .msg.err { display: block; background: #fef2f2; color: #991b1b; border: 1px solid #fecaca; }
     
-    .item { border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; margin-top: 12px; background: #f8fafc; box-shadow: 0 1px 2px rgba(0,0,0,0.02); }
-    .line { margin: 6px 0; font-size: 14px; color: #334155; }
-    .strong { font-size: 16px; font-weight: 800; color: var(--ok); margin-top: 8px; display: block; }
+    .item { border: 1px solid var(--border); border-radius: var(--radius); padding: 14px; margin-top: 10px; background: #f8fafc; }
+    .line { margin: 4px 0; font-size: 13px; color: #334155; }
+    .strong { font-size: 15px; font-weight: 800; color: var(--ok); margin-top: 6px; display: block; }
     
-    .popup-panel { display: none; position: fixed; inset: 0; z-index: 20; padding: 20px; background: rgba(15,23,42,0.6); backdrop-filter: blur(6px); overflow-y: auto; animation: fadeIn 0.2s ease; }
+    .popup-panel { display: none; position: fixed; inset: 0; z-index: 20; padding: 20px; background: rgba(15,23,42,0.6); backdrop-filter: blur(6px); overflow-y: auto; }
     .popup-panel.open { display: block; }
-    .popup-content { max-width: 600px; margin: 40px auto; padding: 22px; border-radius: 16px; background: var(--panel); box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25); }
+    .popup-content { max-width: 580px; margin: 40px auto; padding: 20px; border-radius: 16px; background: var(--panel); box-shadow: var(--shadow-lg); }
     
     #reader,#readerCadastro,#readerEntrada,#readerEstoque { width: 100%; overflow: hidden; border-radius: var(--radius); background: #000; margin-top: 10px; border: 1px solid var(--border); }
 
@@ -159,7 +217,7 @@
       max-width: 520px;
       max-height: 85vh;
       overflow-y: auto;
-      padding: 22px;
+      padding: 20px;
       margin: auto;
       border-radius: 16px;
       background: #fff;
@@ -168,29 +226,150 @@
   </style>
 </head>
 <body>
-<header><h1>MyStock WMS</h1></header>
+
+<header>
+  <div class="brand">
+    <div class="brand-logo">MS</div>
+    <h1>MyStock WMS</h1>
+  </div>
+  <div class="user-badge">
+    <span>Operador 01</span>
+    <div class="avatar">OP</div>
+  </div>
+</header>
+
 <main>
+  <!-- TELA MENU / DASHBOARD REFORMULADA -->
   <div id="screen-menu" class="screen active">
-    <section>
-      <h2>Menu Principal</h2>
-      <div class="process-group"><div class="process-title">Cadastro</div><div class="menu-grid">
-        <button class="menu-card" data-screen="cadastro"><span class="badge">Produto</span><strong>Cadastrar produto</strong><span>Produto, lote, QC, datas e endereço inicial.</span></button>
-        <button class="menu-card" data-screen="produtos"><span class="badge">Catálogo</span><strong>Produtos cadastrados</strong><span>Produtos, códigos, lotes, datas e saldo.</span></button>
-      </div></div>
-      <div class="process-group"><div class="process-title">Estoque</div><div class="menu-grid">
-        <button class="menu-card" data-screen="entrada"><span class="badge">Entrada</span><strong>Registrar entrada</strong><span>Adicionar saldo em endereço físico.</span></button>
-        <button class="menu-card" data-screen="enderecos"><span class="badge">Endereçamento</span><strong>Endereços e capacidade</strong><span>Ocupação e limite máximo.</span></button>
-        <button class="menu-card" data-screen="estoque"><span class="badge">Inventário</span><strong>Consultar estoque</strong><span>Bipar e ver saldo/endereço.</span></button>
-      </div></div>
-      <div class="process-group"><div class="process-title">Operação</div><div class="menu-grid">
-        <button class="menu-card" data-screen="separacao"><span class="badge">Picking</span><strong>Separação</strong><span>Separar pedido do cliente.</span></button>
-      </div></div>
-      <div class="process-group"><div class="process-title">Histórico</div><div class="menu-grid">
-        <button class="menu-card" data-screen="movimentacoes"><span class="badge">Auditoria</span><strong>Movimentações</strong><span>Entradas, saídas e saldos.</span></button>
-      </div></div>
-    </section>
+    
+    <!-- Painel de KPIs Rápidos -->
+    <div class="kpi-grid">
+      <div class="kpi-card">
+        <span class="kpi-label">Ocupação</span>
+        <span class="kpi-value">78%</span>
+        <span class="kpi-sub">Capacidade OK</span>
+      </div>
+      <div class="kpi-card">
+        <span class="kpi-label">Endereços</span>
+        <span class="kpi-value">142</span>
+        <span class="kpi-sub">Com espaço</span>
+      </div>
+      <div class="kpi-card">
+        <span class="kpi-label">Movs. Hoje</span>
+        <span class="kpi-value">24</span>
+        <span class="kpi-sub">+12% vs ontem</span>
+      </div>
+    </div>
+
+    <!-- Filtros de Navegação Rápida -->
+    <div class="dashboard-controls">
+      <div class="search-bar">
+        <svg class="search-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+        <input id="dashSearch" placeholder="Buscar funcionalidade..." oninput="filtrarDashboard()">
+      </div>
+      <div class="nav-tabs">
+        <button class="tab-btn active" onclick="filtrarAba('todos', this)">Todos</button>
+        <button class="tab-btn" onclick="filtrarAba('cadastro', this)">Cadastro</button>
+        <button class="tab-btn" onclick="filtrarAba('estoque', this)">Estoque</button>
+        <button class="tab-btn" onclick="filtrarAba('operacao', this)">Operação</button>
+        <button class="tab-btn" onclick="filtrarAba('historico', this)">Histórico</button>
+      </div>
+    </div>
+
+    <!-- Módulos Organizadores -->
+    <div class="process-group" data-group="cadastro">
+      <div class="process-title">Gestão de Cadastros</div>
+      <div class="menu-grid">
+        <button class="menu-card" data-screen="cadastro">
+          <div class="card-icon">
+            <svg width="22" height="22" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path></svg>
+          </div>
+          <div class="card-body">
+            <div class="card-header-line"><strong>Cadastrar Produto</strong><span class="badge">Cadastro</span></div>
+            <span>Produto, lote, QC, datas e endereço inicial.</span>
+          </div>
+        </button>
+
+        <button class="menu-card" data-screen="produtos">
+          <div class="card-icon">
+            <svg width="22" height="22" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
+          </div>
+          <div class="card-body">
+            <div class="card-header-line"><strong>Produtos Cadastrados</strong><span class="badge">Catálogo</span></div>
+            <span>Consulta de produtos, códigos, lotes e saldos.</span>
+          </div>
+        </button>
+      </div>
+    </div>
+
+    <div class="process-group" data-group="estoque">
+      <div class="process-title">Movimentação de Estoque</div>
+      <div class="menu-grid">
+        <button class="menu-card" data-screen="entrada">
+          <div class="card-icon">
+            <svg width="22" height="22" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1"></path></svg>
+          </div>
+          <div class="card-body">
+            <div class="card-header-line"><strong>Registrar Entrada</strong><span class="badge">Recebimento</span></div>
+            <span>Adicionar saldo em endereço físico.</span>
+          </div>
+        </button>
+
+        <button class="menu-card" data-screen="enderecos">
+          <div class="card-icon">
+            <svg width="22" height="22" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path></svg>
+          </div>
+          <div class="card-body">
+            <div class="card-header-line"><strong>Endereços e Capacidade</strong><span class="badge">Mapa</span></div>
+            <span>Gerenciar ocupação e limites do armazém.</span>
+          </div>
+        </button>
+
+        <button class="menu-card" data-screen="estoque">
+          <div class="card-icon">
+            <svg width="22" height="22" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+          </div>
+          <div class="card-body">
+            <div class="card-header-line"><strong>Consultar Estoque</strong><span class="badge">Inventário</span></div>
+            <span>Bipar QR/código e verificar posição e saldo.</span>
+          </div>
+        </button>
+      </div>
+    </div>
+
+    <div class="process-group" data-group="operacao">
+      <div class="process-title">Operações de Separação</div>
+      <div class="menu-grid">
+        <button class="menu-card" data-screen="separacao">
+          <div class="card-icon">
+            <svg width="22" height="22" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"></path></svg>
+          </div>
+          <div class="card-body">
+            <div class="card-header-line"><strong>Separação (Picking)</strong><span class="badge">Pedido</span></div>
+            <span>Atender pedidos de saída com validação por código.</span>
+          </div>
+        </button>
+      </div>
+    </div>
+
+    <div class="process-group" data-group="historico">
+      <div class="process-title">Auditoria e Registro</div>
+      <div class="menu-grid">
+        <button class="menu-card" data-screen="movimentacoes">
+          <div class="card-icon">
+            <svg width="22" height="22" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path></svg>
+          </div>
+          <div class="card-body">
+            <div class="card-header-line"><strong>Histórico de Movimentações</strong><span class="badge">Auditoria</span></div>
+            <span>Rastrear entradas, saídas e saldos por data.</span>
+          </div>
+        </button>
+      </div>
+    </div>
+
   </div>
 
+  <!-- DEMAIS TELAS MANTIDAS IGUAIS -->
   <div id="screen-cadastro" class="screen">
     <div class="screen-title"><button class="back-btn" data-screen="menu">Voltar</button><h2>Cadastrar produto</h2></div>
     <section>
@@ -273,6 +452,7 @@ let scanner=null, scannerCadastro=null, scannerEntrada=null, scannerEstoque=null
 let currentPreview=null, enderecosCache=[], enderecoDetalheAtual=null;
 const $ = id => document.getElementById(id);
 const esc = v => String(v ?? "").replace(/[&<>"']/g, ch => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[ch]));
+
 function call(name, payload="") { 
   if (!window.MyStock || typeof window.MyStock[name] !== "function") {
     throw new Error(`Função ${name} não encontrada no ambiente MyStock.`);
@@ -282,6 +462,29 @@ function call(name, payload="") {
   if (!data.ok) throw new Error(data.error || "Falha na operação."); 
   return data; 
 }
+
+/* LÓGICA DE FILTRAGEM DO NOVO DASHBOARD */
+function filtrarAba(grupo, btn) {
+  document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
+  btn.classList.add("active");
+
+  document.querySelectorAll(".process-group").forEach(g => {
+    if (grupo === "todos" || g.dataset.group === grupo) {
+      g.style.display = "block";
+    } else {
+      g.style.display = "none";
+    }
+  });
+}
+
+function filtrarDashboard() {
+  const termo = $("dashSearch").value.toLowerCase();
+  document.querySelectorAll(".menu-card").forEach(card => {
+    const texto = card.textContent.toLowerCase();
+    card.style.display = texto.includes(termo) ? "flex" : "none";
+  });
+}
+
 function limparTelaOperacional(){
   document.querySelectorAll(".popup-panel").forEach(el=>el.classList.remove("open"));
 
