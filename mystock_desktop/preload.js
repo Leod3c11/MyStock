@@ -1,7 +1,7 @@
 const { contextBridge, ipcRenderer } = require("electron");
 
 const methods = [
-  "statusAuth", "criarAdminInicial", "login", "logout",
+  "statusAuth", "criarAdminInicial", "login", "logout", "enderecoLan",
   "listarUsuarios", "salvarUsuario", "alternarUsuario",
   "salvarProduto",
   "salvarEndereco",

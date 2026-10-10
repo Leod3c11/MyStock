@@ -2,7 +2,7 @@ name: Build MyStock Android APK
 
 on:
   push:
-    branches: [ main ]
+    branches: [ main, feature/electron-windows-desktop ]
   workflow_dispatch:
 
 jobs:

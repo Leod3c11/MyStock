@@ -36,7 +36,7 @@ public class MainActivity extends Activity {
         });
 
         MyStockDbHelper db = new MyStockDbHelper(this);
-        webView.addJavascriptInterface(new MyStockBridge(db), "MyStock");
+        webView.addJavascriptInterface(new MyStockBridge(this), "MyStock");
 
         if (checkSelfPermission(Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
             requestPermissions(new String[]{Manifest.permission.CAMERA}, CAMERA_REQUEST);
