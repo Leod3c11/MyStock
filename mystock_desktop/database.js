@@ -1,0 +1,309 @@
+const fs = require("node:fs");
+const path = require("node:path");
+const crypto = require("node:crypto");
+const Database = require("better-sqlite3");
+
+class MyStockDatabase {
+  constructor(userDataPath) {
+    fs.mkdirSync(userDataPath, { recursive: true });
+    this.db = new Database(path.join(userDataPath, "mystock.db"));
+    this.db.pragma("journal_mode = WAL");
+    this.db.pragma("foreign_keys = ON");
+    this.createSchema();
+  }
+
+  close() { this.db.close(); }
+
+  createSchema() {
+    this.db.exec(`
+      CREATE TABLE IF NOT EXISTS produtos (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        numero TEXT NOT NULL UNIQUE,
+        codigo_barras TEXT,
+        nome TEXT NOT NULL
+      );
+      CREATE UNIQUE INDEX IF NOT EXISTS idx_produtos_codigo_barras
+        ON produtos(codigo_barras)
+        WHERE codigo_barras IS NOT NULL AND codigo_barras != '';
+      CREATE TABLE IF NOT EXISTS lotes (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        produto_id INTEGER NOT NULL REFERENCES produtos(id),
+        lote TEXT NOT NULL,
+        unidades_por_caixa INTEGER NOT NULL,
+        fabricacao TEXT NOT NULL,
+        vencimento TEXT NOT NULL,
+        UNIQUE(produto_id, lote)
+      );
+      CREATE TABLE IF NOT EXISTS enderecos (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        codigo TEXT NOT NULL UNIQUE,
+        capacidade_maxima INTEGER NOT NULL DEFAULT 0
+      );
+      CREATE TABLE IF NOT EXISTS estoque (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        lote_id INTEGER NOT NULL REFERENCES lotes(id),
+        endereco_id INTEGER NOT NULL REFERENCES enderecos(id),
+        quantidade INTEGER NOT NULL DEFAULT 0,
+        UNIQUE(lote_id, endereco_id)
+      );
+      CREATE TABLE IF NOT EXISTS movimentacoes (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        tipo TEXT NOT NULL,
+        produto_numero TEXT NOT NULL,
+        produto_nome TEXT NOT NULL,
+        lote TEXT NOT NULL,
+        endereco TEXT NOT NULL,
+        quantidade INTEGER NOT NULL,
+        saldo_apos INTEGER NOT NULL,
+        data_hora TEXT NOT NULL
+      );
+    `);
+  }
+
+  ok(extra = {}) { return { ok: true, ...extra }; }
+  fail(message) { throw new Error(message); }
+
+  normalizeDate(input) {
+    const value = String(input ?? "").trim();
+    const match = value.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2}|\d{4})$/);
+    if (!match) this.fail("Use datas no formato DD/MM/AAAA ou DD/MM/AA.");
+    const day = Number(match[1]);
+    const month = Number(match[2]);
+    let year = Number(match[3]);
+    if (match[3].length === 2) year += year >= 70 ? 1900 : 2000;
+    const date = new Date(Date.UTC(year, month - 1, day));
+    if (date.getUTCFullYear() !== year || date.getUTCMonth() !== month - 1 || date.getUTCDate() !== day)
+      this.fail("Data inválida. Confira dia, mês e ano.");
+    return String(day).padStart(2, "0") + "/" + String(month).padStart(2, "0") + "/" + year;
+  }
+
+  now() {
+    const d = new Date();
+    const pad = n => String(n).padStart(2, "0");
+    return pad(d.getDate()) + "/" + pad(d.getMonth() + 1) + "/" + d.getFullYear() +
+      " " + pad(d.getHours()) + ":" + pad(d.getMinutes()) + ":" + pad(d.getSeconds());
+  }
+
+  rows(sql, params = []) { return this.db.prepare(sql).all(...params); }
+  productId(value) {
+    const row = this.db.prepare("SELECT id FROM produtos WHERE numero = ? OR codigo_barras = ?").get(value, value);
+    return row ? row.id : -1;
+  }
+  addressId(value) {
+    const row = this.db.prepare("SELECT id FROM enderecos WHERE codigo = ?").get(value);
+    return row ? row.id : -1;
+  }
+
+  addMovement(tipo, numero, nome, lote, endereco, quantidade, saldo) {
+    this.db.prepare(`INSERT INTO movimentacoes
+      (tipo, produto_numero, produto_nome, lote, endereco, quantidade, saldo_apos, data_hora)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?)`)
+      .run(tipo, numero, nome, lote, endereco, quantidade, saldo, this.now());
+  }
+
+  saveAddress(data) {
+    const codigo = String(data.codigo || "").trim().toUpperCase();
+    const capacidade = Number.parseInt(data.capacidade_maxima, 10) || 0;
+    if (!codigo) this.fail("Informe o endereço.");
+    if (capacidade <= 0) this.fail("O limite máximo precisa ser maior que zero.");
+    const row = this.db.prepare(`SELECT COALESCE(SUM(e.quantidade), 0) AS ocupado
+      FROM enderecos en LEFT JOIN estoque e ON e.endereco_id = en.id WHERE en.codigo = ?`).get(codigo);
+    if (capacidade < row.ocupado)
+      this.fail("Esse endereço já possui " + row.ocupado + " unidade(s). O novo limite não pode ser menor que a ocupação atual.");
+    this.db.prepare("INSERT OR IGNORE INTO enderecos(codigo, capacidade_maxima) VALUES (?, ?)").run(codigo, capacidade);
+    this.db.prepare("UPDATE enderecos SET capacidade_maxima = ? WHERE codigo = ?").run(capacidade, codigo);
+    return this.ok({ message: "Endereço salvo com sucesso." });
+  }
+
+  listAddresses(onlyAvailable) {
+    let sql = `SELECT en.codigo, en.capacidade_maxima,
+      COALESCE(SUM(e.quantidade), 0) AS ocupado,
+      en.capacidade_maxima - COALESCE(SUM(e.quantidade), 0) AS disponivel
+      FROM enderecos en LEFT JOIN estoque e ON e.endereco_id = en.id
+      GROUP BY en.id, en.codigo, en.capacidade_maxima`;
+    if (onlyAvailable) sql += " HAVING disponivel > 0";
+    sql += " ORDER BY en.codigo";
+    return this.ok({ itens: this.rows(sql) });
+  }
+
+  saveProduct(data) {
+    const numero = String(data.numero || "").trim();
+    const codigo = String(data.codigo_barras || "").trim();
+    const nome = String(data.nome || "").trim();
+    const lote = String(data.lote || "").trim();
+    const qc = Number.parseInt(data.unidades_por_caixa, 10) || 0;
+    const fabricacao = this.normalizeDate(data.fabricacao);
+    const vencimento = this.normalizeDate(data.vencimento);
+    const endereco = String(data.endereco || "").trim().toUpperCase();
+    const quantidade = Number.parseInt(data.quantidade_entrada, 10) || 0;
+    if (!numero || !nome || !lote) this.fail("Informe número, nome e lote.");
+    if (qc <= 0) this.fail("Unidades por caixa precisa ser maior que zero.");
+    if (quantidade > 0 && !endereco) this.fail("Selecione um endereço para registrar a quantidade inicial.");
+    if (endereco && quantidade <= 0) this.fail("Informe a quantidade inicial para usar o endereço selecionado.");
+
+    const tx = this.db.transaction(() => {
+      this.db.prepare("INSERT OR IGNORE INTO produtos(numero, codigo_barras, nome) VALUES (?, ?, ?)")
+        .run(numero, codigo || null, nome);
+      this.db.prepare("UPDATE produtos SET codigo_barras = ?, nome = ? WHERE numero = ?")
+        .run(codigo || null, nome, numero);
+      const pid = this.productId(numero);
+      this.db.prepare("INSERT OR IGNORE INTO lotes(produto_id, lote, unidades_por_caixa, fabricacao, vencimento) VALUES (?, ?, ?, ?, ?)")
+        .run(pid, lote, qc, fabricacao, vencimento);
+      this.db.prepare("UPDATE lotes SET unidades_por_caixa = ?, fabricacao = ?, vencimento = ? WHERE produto_id = ? AND lote = ?")
+        .run(qc, fabricacao, vencimento, pid, lote);
+    });
+    tx();
+
+    if (quantidade > 0) {
+      this.registerEntry({ numero, lote, endereco, quantidade });
+      return this.ok({ message: "Produto salvo e endereçado com sucesso." });
+    }
+    return this.ok({ message: "Produto salvo com sucesso." });
+  }
+
+  registerEntry(data) {
+    const numero = String(data.numero || "").trim();
+    const lote = String(data.lote || "").trim();
+    const endereco = String(data.endereco || "").trim().toUpperCase();
+    const quantidade = Number.parseInt(data.quantidade, 10) || 0;
+    if (!numero || !lote || !endereco) this.fail("Informe produto, lote e endereço.");
+    if (quantidade <= 0) this.fail("Quantidade de entrada precisa ser maior que zero.");
+
+    const tx = this.db.transaction(() => {
+      const product = this.db.prepare(`SELECT l.id AS lote_id, p.numero, p.nome
+        FROM lotes l JOIN produtos p ON p.id = l.produto_id
+        WHERE (p.numero = ? OR p.codigo_barras = ?) AND l.lote = ?`).get(numero, numero, lote);
+      if (!product) this.fail("Produto não encontrado. Cadastre primeiro.");
+      const enderecoId = this.addressId(endereco);
+      if (enderecoId < 0) this.fail("Endereço não cadastrado. Cadastre o endereço e sua capacidade primeiro.");
+      const loc = this.db.prepare(`SELECT en.capacidade_maxima,
+        COALESCE(SUM(e.quantidade), 0) AS ocupado FROM enderecos en
+        LEFT JOIN estoque e ON e.endereco_id = en.id WHERE en.id = ?
+        GROUP BY en.id, en.capacidade_maxima`).get(enderecoId);
+      const disponivel = loc.capacidade_maxima - loc.ocupado;
+      if (quantidade > disponivel)
+        this.fail("Capacidade insuficiente no endereço " + endereco + ". Disponível: " + disponivel +
+          " unidade(s). Entrada: " + quantidade + " unidade(s).");
+      this.db.prepare("INSERT OR IGNORE INTO estoque(lote_id, endereco_id, quantidade) VALUES (?, ?, 0)")
+        .run(product.lote_id, enderecoId);
+      this.db.prepare("UPDATE estoque SET quantidade = quantidade + ? WHERE lote_id = ? AND endereco_id = ?")
+        .run(quantidade, product.lote_id, enderecoId);
+      const saldo = this.db.prepare("SELECT quantidade FROM estoque WHERE lote_id = ? AND endereco_id = ?")
+        .get(product.lote_id, enderecoId).quantidade;
+      this.addMovement("ENTRADA", product.numero, product.nome, lote, endereco, quantidade, saldo);
+      return saldo;
+    });
+    const saldo = tx();
+    return this.ok({ message: "Entrada registrada. Saldo atual: " + saldo + " unidade(s)." });
+  }
+
+  listStock(filtro) {
+    let sql = `SELECT p.numero, p.codigo_barras, p.nome, l.lote, l.unidades_por_caixa,
+      l.fabricacao, l.vencimento, en.codigo AS endereco, e.quantidade
+      FROM estoque e JOIN lotes l ON l.id = e.lote_id
+      JOIN produtos p ON p.id = l.produto_id JOIN enderecos en ON en.id = e.endereco_id`;
+    const params = [];
+    if (filtro.trim()) { sql += " WHERE p.numero = ? OR p.codigo_barras = ?"; params.push(filtro.trim(), filtro.trim()); }
+    sql += " ORDER BY p.numero, substr(l.vencimento, 7, 4) || '-' || substr(l.vencimento, 4, 2) || '-' || substr(l.vencimento, 1, 2), en.codigo";
+    return this.ok({ itens: this.rows(sql, params) });
+  }
+
+  listLots(filtro) {
+    filtro = filtro.trim();
+    if (!filtro) this.fail("Informe o produto.");
+    return this.ok({ itens: this.rows(`SELECT p.numero, p.codigo_barras, p.nome, l.lote,
+      l.unidades_por_caixa, l.fabricacao, l.vencimento
+      FROM lotes l JOIN produtos p ON p.id = l.produto_id
+      WHERE p.numero = ? OR p.codigo_barras = ?
+      ORDER BY substr(l.vencimento, 7, 4) || '-' || substr(l.vencimento, 4, 2) || '-' || substr(l.vencimento, 1, 2), l.lote`, [filtro, filtro]) });
+  }
+
+  listProducts(filtro) {
+    let sql = `SELECT p.numero, p.codigo_barras, p.nome, l.lote, l.unidades_por_caixa,
+      l.fabricacao, l.vencimento, COALESCE(SUM(e.quantidade), 0) AS saldo_total
+      FROM produtos p JOIN lotes l ON l.produto_id = p.id
+      LEFT JOIN estoque e ON e.lote_id = l.id`;
+    const params = [];
+    if (filtro.trim()) {
+      sql += " WHERE p.numero = ? OR p.codigo_barras = ? OR p.nome LIKE ?";
+      params.push(filtro.trim(), filtro.trim(), "%" + filtro.trim() + "%");
+    }
+    sql += ` GROUP BY p.id, p.numero, p.codigo_barras, p.nome, l.id, l.lote,
+      l.unidades_por_caixa, l.fabricacao, l.vencimento
+      ORDER BY p.numero, substr(l.vencimento, 7, 4) || '-' || substr(l.vencimento, 4, 2) || '-' || substr(l.vencimento, 1, 2), l.lote`;
+    return this.ok({ itens: this.rows(sql, params) });
+  }
+
+  listMovements(filtro) {
+    let sql = "SELECT tipo, produto_numero, produto_nome, lote, endereco, quantidade, saldo_apos, data_hora FROM movimentacoes";
+    const params = [];
+    if (filtro.trim()) {
+      sql += " WHERE produto_numero = ? OR produto_numero IN (SELECT numero FROM produtos WHERE codigo_barras = ?)";
+      params.push(filtro.trim(), filtro.trim());
+    }
+    sql += " ORDER BY id DESC LIMIT 100";
+    return this.ok({ itens: this.rows(sql, params) });
+  }
+
+  previewSeparation(data) {
+    const numero = String(data.numero || "").trim();
+    const pedida = Number.parseInt(data.quantidade, 10) || 0;
+    if (!numero || pedida <= 0) this.fail("Informe produto e quantidade válida.");
+    const saldos = this.rows(`SELECT e.id AS estoque_id, p.numero, p.nome, l.lote,
+      l.unidades_por_caixa, l.vencimento, en.codigo AS endereco, e.quantidade
+      FROM estoque e JOIN lotes l ON l.id = e.lote_id JOIN produtos p ON p.id = l.produto_id
+      JOIN enderecos en ON en.id = e.endereco_id
+      WHERE (p.numero = ? OR p.codigo_barras = ?) AND e.quantidade > 0
+      ORDER BY substr(l.vencimento, 7, 4) || '-' || substr(l.vencimento, 4, 2) || '-' || substr(l.vencimento, 1, 2), en.codigo`, [numero, numero]);
+    if (!saldos.length) this.fail("Produto não encontrado em estoque.");
+    const total = saldos.reduce((sum, row) => sum + row.quantidade, 0);
+    if (total < pedida) this.fail("Saldo insuficiente. Disponível: " + total + ". Solicitado: " + pedida + ".");
+    let restante = pedida;
+    const orientacoes = [];
+    for (const row of saldos) {
+      if (restante <= 0) break;
+      const retirar = Math.min(restante, row.quantidade);
+      const qc = row.unidades_por_caixa;
+      orientacoes.push({
+        estoque_id: row.estoque_id, produto: row.numero, nome: row.nome, lote: row.lote,
+        vencimento: row.vencimento, endereco: row.endereco, quantidade_baixa: retirar,
+        qtd_operador: retirar % qc === 0 ? retirar / qc : retirar,
+        unidade_operador: retirar % qc === 0 ? "caixa(s)" : "unidade(s)"
+      });
+      restante -= retirar;
+    }
+    const token = { id: crypto.randomUUID(), orientacoes };
+    return this.ok({ token: JSON.stringify(token), produto: orientacoes[0].produto,
+      nome: orientacoes[0].nome, quantidade_pedida: pedida, orientacoes });
+  }
+
+  confirmSeparation(data) {
+    let token;
+    try { token = JSON.parse(data.token || "{}"); } catch { this.fail("Orientação inválida. Gere a separação novamente."); }
+    const orientacoes = token.orientacoes || [];
+    const confirmacoes = data.confirmacoes || [];
+    if (!orientacoes.length || confirmacoes.length !== orientacoes.length)
+      this.fail("Confirmação incompleta. Gere a orientação novamente.");
+    for (let i = 0; i < orientacoes.length; i++) {
+      const esperado = Number(orientacoes[i].qtd_operador);
+      const confirmado = Number(confirmacoes.find(x => Number(x.index) === i)?.quantidade_confirmada);
+      if (!Number.isFinite(confirmado) || esperado !== confirmado)
+        this.fail("Quantidade confirmada diferente da orientação. Estoque não alterado.");
+    }
+    const tx = this.db.transaction(() => {
+      for (const item of orientacoes) {
+        const atualRow = this.db.prepare("SELECT quantidade FROM estoque WHERE id = ?").get(item.estoque_id);
+        if (!atualRow) this.fail("Estoque não encontrado. Gere a orientação novamente.");
+        if (atualRow.quantidade < item.quantidade_baixa)
+          this.fail("Saldo mudou e ficou insuficiente. Gere a orientação novamente.");
+        const novoSaldo = atualRow.quantidade - item.quantidade_baixa;
+        this.db.prepare("UPDATE estoque SET quantidade = ? WHERE id = ?").run(novoSaldo, item.estoque_id);
+        this.addMovement("SAIDA", item.produto, item.nome, item.lote, item.endereco, item.quantidade_baixa, novoSaldo);
+      }
+    });
+    tx();
+    return this.ok({ message: "Separação confirmada e estoque atualizado." });
+  }
+}
+
+module.exports = MyStockDatabase;
