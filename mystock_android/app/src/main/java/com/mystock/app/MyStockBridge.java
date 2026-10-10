@@ -82,29 +82,3 @@ public class MyStockBridge {
         catch (Exception e) { return fail(e); }
     }
 }
-
-    @JavascriptInterface
-    public String transferirEstoque(String jsonPayload) {
-        try {
-            org.json.JSONObject obj = new org.json.JSONObject(jsonPayload);
-            String numero = obj.getString("numero");
-            String lote = obj.getString("lote");
-            String origem = obj.getString("origem").toUpperCase();
-            String destino = obj.getString("destino").toUpperCase();
-            int qtd = obj.getInt("quantidade");
-
-            boolean sucesso = dbHelper.transferirEstoque(numero, lote, origem, destino, qtd);
-            
-            org.json.JSONObject res = new org.json.JSONObject();
-            if (sucesso) {
-                res.put("ok", true);
-                res.put("message", "Transferência realizada com sucesso!");
-            } else {
-                res.put("ok", false);
-                res.put("error", "Erro ao transferir. Verifique saldo ou endereços.");
-            }
-            return res.toString();
-        } catch (Exception e) {
-            return "{\"ok\":false,\"error\":\"" + e.getMessage() + "\"}";
-        }
-    }
