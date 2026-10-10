@@ -162,6 +162,23 @@
 \n  </style>
 </head>
 <body>
+<div id="loginOverlay">
+  <div class="login-card">
+    <div class="brand"><div class="brand-logo">MS</div><h1>MyStock</h1></div>
+    <h2 style="margin-top:22px">Entrar no sistema</h2>
+    <p>Conecte ao computador que está executando o MyStock. O celular e o PC precisam estar na mesma rede Wi-Fi.</p>
+    <label for="serverAddress">Endereço do computador</label>
+    <input id="serverAddress" autocomplete="url" placeholder="http://192.168.1.10:8765">
+    <label for="loginUsername">Usuário</label>
+    <input id="loginUsername" autocomplete="username" autocapitalize="none" placeholder="Seu usuário">
+    <label for="loginPassword">Senha</label>
+    <input id="loginPassword" type="password" autocomplete="current-password" placeholder="Sua senha">
+    <button id="loginButton" type="button">Entrar</button>
+    <div id="loginMessage" class="msg"></div>
+    <p style="font-size:11px;margin-bottom:0">O administrador deve criar sua conta no computador antes do primeiro acesso.</p>
+  </div>
+</div>
+
 
 <header>
   <div class="brand">
@@ -617,7 +634,14 @@ $("startScannerEstoque").onclick=()=>scan($("readerEstoque"),$("estNumero"),$("s
 $("startScanner").onclick=()=>scan($("reader"),$("produto"),$("scanMsg"),s=>scanner=s,$("startScanner"));
 
 window.addEventListener("DOMContentLoaded", () => {
-  atualizarDashboardKPIs();
+  try {
+    const saved=JSON.parse(window.MyStock.servidorSalvo());
+    if(saved.serverUrl) $("serverAddress").value=saved.serverUrl;
+  } catch(e) {}
+  $("loginButton").onclick=entrarAndroid;
+  $("loginPassword").addEventListener("keydown",e=>{if(e.key==="Enter")entrarAndroid();});
+  $("loginUsername").addEventListener("keydown",e=>{if(e.key==="Enter")entrarAndroid();});
+  $("logoutAndroid").onclick=sairAndroid;
 });
 </script>
 </body>
