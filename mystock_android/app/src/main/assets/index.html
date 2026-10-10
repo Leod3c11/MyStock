@@ -145,7 +145,84 @@ let currentPreview=null, enderecosCache=[], enderecoDetalheAtual=null;
 const $ = id => document.getElementById(id);
 const esc = v => String(v ?? "").replace(/[&<>"']/g, ch => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[ch]));
 function call(name, payload="") { const raw = typeof payload === "string" ? window.MyStock[name](payload) : window.MyStock[name](JSON.stringify(payload)); const data = JSON.parse(raw); if (!data.ok) throw new Error(data.error || "Falha na operação."); return data; }
-function showScreen(name){ document.querySelectorAll(".screen").forEach(e=>e.classList.remove("active")); $(`screen-${name}`).classList.add("active"); scrollTo(0,0); }
+function limparTelaOperacional(){
+  // Fecha janelas e seletores abertos.
+  document.querySelectorAll(".popup-panel").forEach(el=>el.classList.remove("open"));
+
+  // Limpa campos de entrada sem apagar dados do banco.
+  document.querySelectorAll(".screen input").forEach(el=>{
+    el.value="";
+  });
+
+  // Limpa mensagens, resultados e listas da operação anterior.
+  [
+    "cadMsg","scanCadastroMsg","cadEnderecosLista",
+    "produtosResultado",
+    "entMsg","scanEntradaMsg","lotesEntradaLista","enderecosEntrada",
+    "endMsg","enderecosResultado",
+    "endDetalheResumo","endDetalheMsg",
+    "scanEstoqueMsg","estoqueResultado",
+    "scanMsg","resultado","confirmItens","confirmMsg",
+    "movResultado"
+  ].forEach(id=>{
+    const el=$(id);
+    if(el){
+      el.innerHTML="";
+      if(el.classList.contains("msg")) el.className="msg";
+    }
+  });
+
+  // Reinicia os controles da separação.
+  if($("confirmBox")) $("confirmBox").style.display="none";
+  if($("confirmar")) $("confirmar").disabled=false;
+  if($("cancelar")) $("cancelar").disabled=false;
+
+  // Descarta a prévia antiga e o endereço selecionado em memória.
+  currentPreview=null;
+  enderecoDetalheAtual=null;
+  enderecosCache=[];
+
+  // Limpa os espaços dos leitores.
+  ["reader","readerCadastro","readerEntrada","readerEstoque"].forEach(id=>{
+    const el=$(id);
+    if(el) el.innerHTML="";
+  });
+
+  // Se algum leitor ainda estiver ativo, tenta encerrar a câmera.
+  [
+    ["scanner", s=>scanner=s],
+    ["scannerCadastro", s=>scannerCadastro=s],
+    ["scannerEntrada", s=>scannerEntrada=s],
+    ["scannerEstoque", s=>scannerEstoque=s]
+  ].forEach(([nome,atribuir])=>{
+    const sc=({
+      scanner,
+      scannerCadastro,
+      scannerEntrada,
+      scannerEstoque
+    })[nome];
+
+    if(sc){
+      atribuir(null);
+      try{
+        sc.stop()
+          .then(()=>{ try{sc.clear();}catch(e){} })
+          .catch(()=>{ try{sc.clear();}catch(e){} });
+      }catch(e){}
+    }
+  });
+}
+
+function showScreen(name){
+  // Ao voltar ao menu, encerra a tarefa e prepara telas limpas.
+  if(name==="menu") limparTelaOperacional();
+
+  document.querySelectorAll(".screen").forEach(e=>e.classList.remove("active"));
+  const destino=$(`screen-${name}`);
+  if(!destino) return;
+  destino.classList.add("active");
+  scrollTo(0,0);
+}
 function showMsg(el,text,ok=true){ el.textContent=text; el.className=ok?"msg ok":"msg err"; }
 function clearMsg(el){ el.textContent=""; el.className="msg"; }
 function dateMask(v){ const d=String(v||"").replace(/\D/g,"").slice(0,8); if(d.length<=2)return d; if(d.length<=4)return `${d.slice(0,2)}/${d.slice(2)}`; return `${d.slice(0,2)}/${d.slice(2,4)}/${d.slice(4)}`; }
