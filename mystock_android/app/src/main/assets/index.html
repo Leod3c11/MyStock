@@ -149,8 +149,35 @@ function showMsg(el,text,ok=true){ el.textContent=text; el.className=ok?"msg ok"
 function clearMsg(el){ el.textContent=""; el.className="msg"; }
 function dateMask(v){ const d=String(v||"").replace(/\D/g,"").slice(0,8); if(d.length<=2)return d; if(d.length<=4)return `${d.slice(0,2)}/${d.slice(2)}`; return `${d.slice(0,2)}/${d.slice(2,4)}/${d.slice(4)}`; }
 function attachDateMask(id){ $(id).addEventListener("input",()=>$(id).value=dateMask($(id).value)); }
+let contextoAudioMyStock=null;
+function prepararAudioMyStock(){
+  try{
+    const AudioCtx=window.AudioContext||window.webkitAudioContext;
+    if(!AudioCtx)return;
+    if(!contextoAudioMyStock)contextoAudioMyStock=new AudioCtx();
+    if(contextoAudioMyStock.state==="suspended")contextoAudioMyStock.resume();
+  }catch(e){}
+}
+function bipLeituraMyStock(){
+  try{
+    prepararAudioMyStock();
+    if(!contextoAudioMyStock)return;
+    const ctx=contextoAudioMyStock;
+    const oscilador=ctx.createOscillator();
+    const volume=ctx.createGain();
+    oscilador.type="sine";
+    oscilador.frequency.setValueAtTime(1800,ctx.currentTime);
+    volume.gain.setValueAtTime(0.0001,ctx.currentTime);
+    volume.gain.exponentialRampToValueAtTime(0.25,ctx.currentTime+0.015);
+    volume.gain.exponentialRampToValueAtTime(0.0001,ctx.currentTime+0.13);
+    oscilador.connect(volume);
+    volume.connect(ctx.destination);
+    oscilador.start(ctx.currentTime);
+    oscilador.stop(ctx.currentTime+0.14);
+  }catch(e){}
+}
 function formats(){ return window.Html5QrcodeSupportedFormats ? [Html5QrcodeSupportedFormats.QR_CODE,Html5QrcodeSupportedFormats.CODE_128,Html5QrcodeSupportedFormats.CODE_39,Html5QrcodeSupportedFormats.EAN_13,Html5QrcodeSupportedFormats.EAN_8,Html5QrcodeSupportedFormats.ITF] : undefined; }
-async function scan(targetReader,targetInput,targetMsg,scannerSetter,startButton,after){ clearMsg(targetMsg); if(!window.Html5Qrcode){ showMsg(targetMsg,"Leitor não carregou. Verifique a internet.",false); return; } const sc=new Html5Qrcode(targetReader.id); scannerSetter(sc); try{ await sc.start({facingMode:"environment"},{fps:10,qrbox:{width:240,height:160},formatsToSupport:formats()},async text=>{ targetInput.value=String(text||"").trim(); showMsg(targetMsg,`Código lido: ${targetInput.value}`,true); await sc.stop(); sc.clear(); startButton.disabled=false; scannerSetter(null); if(after) after(); }); startButton.disabled=true; }catch(e){ showMsg(targetMsg,"Não consegui abrir a câmera. Permita o acesso à câmera.",false); startButton.disabled=false; scannerSetter(null); } }
+async function scan(targetReader,targetInput,targetMsg,scannerSetter,startButton,after){ prepararAudioMyStock(); clearMsg(targetMsg); if(!window.Html5Qrcode){ showMsg(targetMsg,"Leitor não carregou. Verifique a internet.",false); return; } const sc=new Html5Qrcode(targetReader.id); scannerSetter(sc); try{ await sc.start({facingMode:"environment"},{fps:10,qrbox:{width:240,height:160},formatsToSupport:formats()},async text=>{ bipLeituraMyStock(); targetInput.value=String(text||"").trim(); showMsg(targetMsg,`Código lido: ${targetInput.value}`,true); await sc.stop(); sc.clear(); startButton.disabled=false; scannerSetter(null); if(after) after(); }); startButton.disabled=true; }catch(e){ showMsg(targetMsg,"Não consegui abrir a câmera. Permita o acesso à câmera.",false); startButton.disabled=false; scannerSetter(null); } }
 function renderItems(container, itens, tpl, empty="Nenhum registro encontrado."){ container.innerHTML = itens.length ? itens.map(tpl).join("") : `<div class="msg err">${empty}</div>`; }
 
 function salvarCadastro(){ clearMsg($("cadMsg")); try{ const data=call("salvarProduto",{numero:$("cadNumero").value.trim(),codigo_barras:$("cadCodigoBarras").value.trim(),nome:$("cadNome").value.trim(),lote:$("cadLote").value.trim(),unidades_por_caixa:parseInt($("cadQc").value,10),fabricacao:$("cadFabricacao").value.trim(),vencimento:$("cadVencimento").value.trim(),endereco:$("cadEndereco").value.trim().toUpperCase(),quantidade_entrada:parseInt($("cadQuantidadeEntrada").value||"0",10)}); showMsg($("cadMsg"),data.message,true); }catch(e){ showMsg($("cadMsg"),e.message,false); } }
