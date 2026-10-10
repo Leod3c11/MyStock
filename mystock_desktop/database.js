@@ -10,9 +10,104 @@ class MyStockDatabase {
     this.db.pragma("journal_mode = WAL");
     this.db.pragma("foreign_keys = ON");
     this.createSchema();
+    this.migrateLegacyStockSchema();
   }
 
   close() { this.db.close(); }
+
+  // Safely migrates older desktop databases whose estoque table predates lote_id.
+  // The original table is retained as estoque_legacy_backup after a successful migration.
+  migrateLegacyStockSchema() {
+    const cols = this.rows("PRAGMA table_info(estoque)");
+    if (!cols.length || cols.some(col => col.name === "lote_id")) return;
+
+    const backupExists = this.db.prepare(
+      "SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'estoque_legacy_backup'"
+    ).get();
+    if (backupExists) {
+      this.fail("O banco possui uma tabela estoque antiga e uma cópia estoque_legacy_backup. Nenhum dado foi apagado. Faça uma cópia do arquivo mystock.db antes de qualquer reparo manual.");
+    }
+
+    const legacyRows = this.rows("SELECT * FROM estoque");
+    const names = new Set(cols.map(col => col.name));
+    const pick = (row, candidates) => {
+      for (const key of candidates) if (names.has(key) && row[key] !== null && row[key] !== undefined && String(row[key]).trim() !== "") return row[key];
+      return null;
+    };
+
+    const migrate = this.db.transaction(() => {
+      this.db.exec("ALTER TABLE estoque RENAME TO estoque_legacy_backup");
+      this.db.exec(`CREATE TABLE estoque (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        lote_id INTEGER NOT NULL REFERENCES lotes(id),
+        endereco_id INTEGER NOT NULL REFERENCES enderecos(id),
+        quantidade INTEGER NOT NULL DEFAULT 0,
+        UNIQUE(lote_id, endereco_id)
+      )`);
+
+      for (const row of legacyRows) {
+        const productRef = pick(row, ["produto_id", "product_id", "id_produto"]);
+        const productNumber = pick(row, ["produto_numero", "numero_produto", "numero", "codigo_produto"]);
+        let product = null;
+        if (productRef !== null && Number.isFinite(Number(productRef))) {
+          product = this.db.prepare("SELECT id, numero FROM produtos WHERE id = ?").get(Number(productRef));
+        }
+        if (!product && productNumber !== null) {
+          product = this.db.prepare("SELECT id, numero FROM produtos WHERE numero = ? OR codigo_barras = ?").get(String(productNumber), String(productNumber));
+        }
+        if (!product) {
+          this.fail("Migração segura interrompida: não foi possível associar uma linha antiga do estoque a um produto. A transação foi desfeita e os dados originais foram preservados.");
+        }
+
+        const lotRef = pick(row, ["lote", "codigo_lote", "lote_codigo", "numero_lote"]);
+        let lot = null;
+        if (lotRef !== null) {
+          lot = this.db.prepare("SELECT id FROM lotes WHERE produto_id = ? AND lote = ?").get(product.id, String(lotRef));
+          if (!lot && Number.isFinite(Number(lotRef))) {
+            lot = this.db.prepare("SELECT id FROM lotes WHERE id = ? AND produto_id = ?").get(Number(lotRef), product.id);
+          }
+        }
+        if (!lot) {
+          const lots = this.db.prepare("SELECT id FROM lotes WHERE produto_id = ? ORDER BY id").all(product.id);
+          if (lots.length === 1) lot = lots[0];
+        }
+        if (!lot) {
+          this.fail("Migração segura interrompida: não foi possível identificar o lote de um registro antigo. A transação foi desfeita e os dados originais foram preservados.");
+        }
+
+        const addressRef = pick(row, ["endereco_id", "address_id", "id_endereco"]);
+        const addressCode = pick(row, ["endereco", "codigo_endereco", "endereco_codigo", "codigo"]);
+        let address = null;
+        if (addressRef !== null && Number.isFinite(Number(addressRef))) {
+          address = this.db.prepare("SELECT id FROM enderecos WHERE id = ?").get(Number(addressRef));
+        }
+        if (!address && addressCode !== null) {
+          address = this.db.prepare("SELECT id FROM enderecos WHERE codigo = ?").get(String(addressCode).trim().toUpperCase());
+        }
+        if (!address) {
+          this.fail("Migração segura interrompida: não foi possível associar um registro antigo a um endereço. A transação foi desfeita e os dados originais foram preservados.");
+        }
+
+        const quantityValue = pick(row, ["quantidade", "quantity", "saldo", "qtd"]);
+        const quantity = Number.parseInt(quantityValue, 10);
+        if (!Number.isInteger(quantity) || quantity < 0) {
+          this.fail("Migração segura interrompida: quantidade antiga inválida. A transação foi desfeita e os dados originais foram preservados.");
+        }
+        this.db.prepare(`INSERT INTO estoque(lote_id, endereco_id, quantidade) VALUES (?, ?, ?)
+          ON CONFLICT(lote_id, endereco_id) DO UPDATE SET quantidade = quantidade + excluded.quantidade`)
+          .run(lot.id, address.id, quantity);
+      }
+    });
+
+    try {
+      migrate();
+    } catch (error) {
+      if (String(error.message || "").includes("no such column")) {
+        this.fail("O banco antigo tem uma estrutura diferente da esperada. Nenhum registro foi removido. Detalhe: " + error.message);
+      }
+      throw error;
+    }
+  }
 
   createSchema() {
     this.db.exec(`
