@@ -14,7 +14,8 @@
     "electron-builder": "^26.0.12"
   },
   "dependencies": {
-    "better-sqlite3": "^12.4.1"
+    "better-sqlite3": "^12.4.1",
+    "html5-qrcode": "^2.3.8"
   },
   "build": {
     "appId": "br.com.mystock.desktop",
@@ -34,7 +35,9 @@
       "target": [
         {
           "target": "nsis",
-          "arch": ["x64"]
+          "arch": [
+            "x64"
+          ]
         }
       ]
     },
