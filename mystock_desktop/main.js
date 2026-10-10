@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, dialog } = require("electron");
+const { app, BrowserWindow, ipcMain, dialog, session } = require("electron");
 const path = require("node:path");
 const Database = require("./database");
 
@@ -39,6 +39,9 @@ function serializeResult(fn) {
 }
 
 app.whenReady().then(() => {
+  session.defaultSession.setPermissionRequestHandler((webContents, permission, callback) => {
+    callback(permission === "media");
+  });
   try {
     database = new Database(app.getPath("userData"));
     const methods = {
