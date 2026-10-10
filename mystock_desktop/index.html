@@ -140,6 +140,17 @@
     
     #reader,#readerCadastro,#readerEntrada,#readerEstoque { width: 100%; overflow: hidden; border-radius: var(--radius); background: #000; margin-top: 10px; border: 1px solid var(--border); }
 
+    .auth-overlay { position:fixed; inset:0; z-index:100000; display:flex; align-items:center; justify-content:center; padding:20px; background:rgba(15,23,42,.96); overflow-y:auto; }
+    .auth-card { width:100%; max-width:430px; background:#fff; padding:26px; border-radius:18px; box-shadow:0 20px 60px rgba(0,0,0,.35); }
+    .auth-card h2 { margin-bottom:6px; font-size:23px; }
+    .auth-card p { color:var(--muted); font-size:13px; line-height:1.5; margin:0 0 12px; }
+    .auth-error { display:none; color:#991b1b; background:#fef2f2; border:1px solid #fecaca; padding:10px; border-radius:8px; font-size:13px; margin-top:10px; white-space:pre-wrap; }
+    .user-actions { display:flex; align-items:center; gap:8px; }
+    .user-actions button { width:auto; margin:0; padding:8px 10px; font-size:12px; }
+    .permission-grid { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:8px; }
+    .permission-option { display:flex; align-items:center; gap:8px; padding:9px; border:1px solid var(--border); border-radius:8px; color:var(--text); font-size:12px; }
+    .permission-option input { width:auto; margin:0; }
+    @media(max-width:520px) { .permission-grid { grid-template-columns:1fr; } header { gap:8px; flex-wrap:wrap; } }
     #enderecosEntrada.popup-panel {
       display: none; position: fixed; inset: 0; z-index: 9999; padding: 16px; overflow-y: auto; 
       background: rgba(15,23,42,0.6); backdrop-filter: blur(6px); align-items: center; justify-content: center;
@@ -152,16 +163,26 @@
   </style>
 </head>
 <body>
-
+<div id="authOverlay" class="auth-overlay">
+  <div class="auth-card">
+    <div class="brand" style="margin-bottom:18px"><div class="brand-logo">MS</div><h1 style="font-size:22px">MyStock</h1></div>
+    <div id="authLoginPane"><h2>Acessar sistema</h2><p>Entre com seu usuário e senha para acessar o estoque.</p>
+      <label for="authUsername">Usuário</label><input id="authUsername" autocomplete="username" maxlength="40" placeholder="Seu usuário">
+      <label for="authPassword">Senha</label><input id="authPassword" type="password" autocomplete="current-password" placeholder="Sua senha"><button id="authLogin">Entrar</button>
+    </div>
+    <div id="authSetupPane" style="display:none"><h2>Configuração inicial</h2><p>Crie a conta administradora. Guarde a senha em local seguro; ela será necessária para gerenciar os demais usuários.</p>
+      <label for="setupName">Nome do administrador</label><input id="setupName" autocomplete="name" placeholder="Nome completo">
+      <label for="setupUsername">Usuário administrador</label><input id="setupUsername" autocomplete="username" maxlength="40" placeholder="Ex.: admin">
+      <label for="setupPassword">Senha (mínimo 8 caracteres)</label><input id="setupPassword" type="password" autocomplete="new-password" minlength="8" placeholder="Crie uma senha forte"><button id="setupCreateAdmin">Criar administrador</button>
+    </div><div id="authError" class="auth-error" role="alert"></div>
+  </div>
+</div>
 <header>
   <div class="brand">
     <div class="brand-logo">MS</div>
     <h1>MyStock WMS</h1>
   </div>
-  <div class="user-badge">
-    <span>Operador 01</span>
-    <div class="avatar">OP</div>
-  </div>
+  <div class="user-actions"><div class="user-badge"><span id="userNameBadge">Não autenticado</span><div id="userAvatar" class="avatar">MS</div></div><button id="logoutButton" class="secondary" style="display:none">Sair</button></div>
 </header>
 
 <main>
@@ -203,7 +224,7 @@
     <div class="process-group" data-group="cadastro">
       <div class="process-title">Gestão de Cadastros</div>
       <div class="menu-grid">
-        <button class="menu-card" data-screen="cadastro">
+        <button class="menu-card" data-screen="cadastro" data-permission="cadastro">
           <div class="card-icon"><svg width="22" height="22" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path></svg></div>
           <div class="card-body">
             <div class="card-header-line"><strong>Cadastrar Produto</strong><span class="badge">Cadastro</span></div>
@@ -211,7 +232,7 @@
           </div>
         </button>
 
-        <button class="menu-card" data-screen="produtos">
+        <button class="menu-card" data-screen="produtos" data-permission="produtos">
           <div class="card-icon"><svg width="22" height="22" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg></div>
           <div class="card-body">
             <div class="card-header-line"><strong>Produtos Cadastrados</strong><span class="badge">Catálogo</span></div>
@@ -224,7 +245,7 @@
     <div class="process-group" data-group="estoque">
       <div class="process-title">Movimentação de Estoque</div>
       <div class="menu-grid">
-        <button class="menu-card" data-screen="entrada">
+        <button class="menu-card" data-screen="entrada" data-permission="entrada">
           <div class="card-icon"><svg width="22" height="22" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1"></path></svg></div>
           <div class="card-body">
             <div class="card-header-line"><strong>Registrar Entrada</strong><span class="badge">Recebimento</span></div>
@@ -232,7 +253,7 @@
           </div>
         </button>
 
-        <button class="menu-card" data-screen="enderecos">
+        <button class="menu-card" data-screen="enderecos" data-permission="enderecos">
           <div class="card-icon"><svg width="22" height="22" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path></svg></div>
           <div class="card-body">
             <div class="card-header-line"><strong>Endereços e Capacidade</strong><span class="badge">Mapa</span></div>
@@ -240,7 +261,7 @@
           </div>
         </button>
 
-        <button class="menu-card" data-screen="estoque">
+        <button class="menu-card" data-screen="estoque" data-permission="consulta_estoque">
           <div class="card-icon"><svg width="22" height="22" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg></div>
           <div class="card-body">
             <div class="card-header-line"><strong>Consultar Estoque</strong><span class="badge">Inventário</span></div>
@@ -253,7 +274,7 @@
     <div class="process-group" data-group="operacao">
       <div class="process-title">Operações de Separação</div>
       <div class="menu-grid">
-        <button class="menu-card" data-screen="separacao">
+        <button class="menu-card" data-screen="separacao" data-permission="separacao">
           <div class="card-icon"><svg width="22" height="22" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"></path></svg></div>
           <div class="card-body">
             <div class="card-header-line"><strong>Separação (Picking)</strong><span class="badge">Pedido</span></div>
@@ -266,7 +287,7 @@
     <div class="process-group" data-group="historico">
       <div class="process-title">Auditoria e Registro</div>
       <div class="menu-grid">
-        <button class="menu-card" data-screen="movimentacoes">
+        <button class="menu-card" data-screen="movimentacoes" data-permission="movimentacoes">
           <div class="card-icon"><svg width="22" height="22" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path></svg></div>
           <div class="card-body">
             <div class="card-header-line"><strong>Histórico de Movimentações</strong><span class="badge">Auditoria</span></div>
@@ -276,6 +297,9 @@
       </div>
     </div>
 
+    <div class="process-group" data-group="admin" data-admin-only="true"><div class="process-title">Administração</div><div class="menu-grid">
+      <button class="menu-card" data-screen="usuarios" data-admin-only="true"><div class="card-icon"><svg width="22" height="22" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2m7-10a4 4 0 100-8 4 4 0 000 8zm13 10v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"></path></svg></div><div class="card-body"><div class="card-header-line"><strong>Usuários e permissões</strong><span class="badge">Admin</span></div><span>Criar contas, redefinir senhas e escolher operações permitidas.</span></div></button>
+    </div></div>
   </div>
 
   <!-- DEMAIS TELAS DO SISTEMA -->
@@ -353,6 +377,20 @@
   <div id="screen-movimentacoes" class="screen">
     <div class="screen-title"><button class="back-btn" data-screen="menu">Voltar</button><h2>Movimentações</h2></div>
     <section><h2>Histórico Operacional</h2><label>Número do produto</label><input id="movNumero" inputmode="numeric" placeholder="Opcional"><button id="consultarMovimentacoes">Consultar movimentações</button><div id="movResultado"></div></section>
+  </div>
+  <div id="screen-usuarios" class="screen">
+    <div class="screen-title"><button class="back-btn" data-screen="menu">Voltar</button><h2>Usuários e permissões</h2></div>
+    <section><h2 id="userFormTitle">Cadastrar operador</h2><input id="usrId" type="hidden">
+      <label for="usrNome">Nome</label><input id="usrNome" maxlength="100" placeholder="Nome da pessoa">
+      <label for="usrUsername">Usuário de acesso</label><input id="usrUsername" maxlength="40" autocomplete="off" placeholder="Ex.: operador01">
+      <label for="usrPassword">Senha <span style="font-weight:400">(obrigatória ao criar; preencha para redefinir)</span></label><input id="usrPassword" type="password" autocomplete="new-password" placeholder="Mínimo de 8 caracteres">
+      <label>Permissões do operador</label><div class="permission-grid">
+        <label class="permission-option"><input type="checkbox" data-perm="cadastro"> Cadastrar produto</label><label class="permission-option"><input type="checkbox" data-perm="produtos"> Consultar produtos</label>
+        <label class="permission-option"><input type="checkbox" data-perm="entrada"> Registrar entrada</label><label class="permission-option"><input type="checkbox" data-perm="enderecos"> Gerenciar endereços</label>
+        <label class="permission-option"><input type="checkbox" data-perm="consulta_estoque"> Consultar estoque</label><label class="permission-option"><input type="checkbox" data-perm="separacao"> Fazer separação</label>
+        <label class="permission-option"><input type="checkbox" data-perm="movimentacoes"> Ver movimentações</label>
+      </div><button id="saveUserButton">Salvar usuário</button><button id="clearUserForm" class="secondary">Limpar formulário</button><div id="usrMsg" class="msg"></div>
+    </section><section><h2>Contas cadastradas</h2><div id="usersList"></div></section>
   </div>
 </main>
 
@@ -474,6 +512,11 @@ function limparTelaOperacional(){
 }
 
 function showScreen(name){
+  if(!activeUser&&name!=="menu"){initializeAuth();return;}
+  const screenPermission={cadastro:"cadastro",produtos:"produtos",entrada:"entrada",enderecos:"enderecos","endereco-detalhe":"enderecos",estoque:"consulta_estoque",separacao:"separacao",movimentacoes:"movimentacoes"};
+  if(activeUser&&activeUser.role!=="admin"&&screenPermission[name]&&activeUser.permissoes?.[screenPermission[name]]!==true){alert("Seu usuário não tem permissão para acessar esta tela.");return;}
+  if(name==="usuarios"&&activeUser?.role!=="admin"){alert("Apenas o administrador pode gerenciar usuários.");return;}
+  if(name==="usuarios")loadUsers();
   if(name==="menu") {
     limparTelaOperacional();
     atualizarDashboardKPIs();
@@ -551,7 +594,29 @@ function buscarOrientacao(){ $("confirmBox").style.display="none"; try{ currentP
 function confirmarSeparacao(){ if(!currentPreview)return; try{ const confirmacoes=[...document.querySelectorAll(".confirmInput")].map(i=>({index:parseInt(i.dataset.index,10),quantidade_confirmada:parseInt(i.value,10)})); const data=call("confirmarSeparacao",{token:currentPreview.token,confirmacoes}); showMsg($("confirmMsg"),data.message,true); $("confirmar").disabled=true; }catch(e){ showMsg($("confirmMsg"),e.message,false); } }
 function consultarMovimentacoes(){ try{ const data=call("listarMovimentacoes",$("movNumero").value.trim()); renderItems($("movResultado"),data.itens,item=>`<div class="item"><span class="badge">${esc(item.tipo)}</span><div class="line"><b>${esc(item.produto_numero)} - ${esc(item.produto_nome)}</b></div><div class="line"><b>Lote:</b> ${esc(item.lote)}</div><div class="line"><b>Endereço:</b> ${esc(item.endereco)}</div><div class="line"><b>Quantidade:</b> ${esc(item.quantidade)}</div><div class="line"><b>Saldo após:</b> ${esc(item.saldo_apos)}</div><div class="line"><b>Data/hora:</b> ${esc(item.data_hora)}</div></div>`); }catch(e){ $("movResultado").innerHTML=`<div class="msg err">${esc(e.message)}</div>`; } }
 
+
+let activeUser=null;
+const permissionLabels={cadastro:"Cadastrar produto",produtos:"Consultar produtos",entrada:"Registrar entrada",enderecos:"Gerenciar endereços",consulta_estoque:"Consultar estoque",separacao:"Fazer separação",movimentacoes:"Ver movimentações"};
+function showAuthError(message){$("authError").textContent=message||"";$("authError").style.display=message?"block":"none";}
+function initializeAuth(){try{const state=call("statusAuth");$("authSetupPane").style.display=state.setupRequired?"block":"none";$("authLoginPane").style.display=state.setupRequired?"none":"block";$("authOverlay").style.display="flex";$("logoutButton").style.display="none";showAuthError("");}catch(e){showAuthError(e.message);}}
+function finishLogin(user){activeUser=user;$("authOverlay").style.display="none";$("userNameBadge").textContent=user.nome+(user.role==="admin"?" · Administrador":" · Operador");$("userAvatar").textContent=(user.nome||"MS").trim().split(/\s+/).slice(0,2).map(x=>x[0]).join("").toUpperCase();$("logoutButton").style.display="inline-block";applyUserPermissions();showScreen("menu");}
+function applyUserPermissions(){
+  document.querySelectorAll(".process-group").forEach(group=>group.style.display="");
+  document.querySelectorAll("[data-permission]").forEach(el=>{const ok=activeUser&&(activeUser.role==="admin"||activeUser.permissoes?.[el.dataset.permission]===true);el.style.display=ok?"":"none";});
+  document.querySelectorAll("[data-admin-only]").forEach(el=>el.style.display=activeUser&&activeUser.role==="admin"?"":"none");
+  document.querySelectorAll(".process-group").forEach(group=>{if(group.dataset.adminOnly==="true"){group.style.display=activeUser?.role==="admin"?"":"none";return;}const cards=[...group.querySelectorAll(".menu-card")];if(cards.length&&!cards.some(card=>card.style.display!=="none"))group.style.display="none";});
+}
+function doLogin(){showAuthError("");try{const result=call("login",{username:$("authUsername").value,password:$("authPassword").value});finishLogin(result.user);$("authPassword").value="";}catch(e){showAuthError(e.message);}}
+function createInitialAdmin(){showAuthError("");try{call("criarAdminInicial",{nome:$("setupName").value,username:$("setupUsername").value,password:$("setupPassword").value});$("authSetupPane").style.display="none";$("authLoginPane").style.display="block";$("authUsername").value=$("setupUsername").value.trim().toLowerCase();$("authPassword").value="";$("setupPassword").value="";showAuthError("Administrador criado. Entre com a senha cadastrada.");}catch(e){showAuthError(e.message);}}
+function doLogout(){try{call("logout");}catch(e){}activeUser=null;document.querySelectorAll(".screen").forEach(el=>el.classList.remove("active"));initializeAuth();}
+function clearUserForm(){$("usrId").value="";$("usrNome").value="";$("usrUsername").value="";$("usrPassword").value="";$("userFormTitle").textContent="Cadastrar operador";$("saveUserButton").textContent="Salvar usuário";document.querySelectorAll("[data-perm]").forEach(el=>el.checked=false);clearMsg($("usrMsg"));}
+function loadUsers(){try{const data=call("listarUsuarios");renderItems($("usersList"),data.itens,user=>{const perms=Object.keys(permissionLabels).filter(key=>user.permissoes?.[key]).map(key=>permissionLabels[key]).join(", ")||"Sem permissões operacionais";const controls=user.role==="admin"?"":`<button class="secondary edit-user" data-id="${user.id}">Editar / redefinir senha</button><button class="${user.ativo?"danger":"secondary"} toggle-user" data-id="${user.id}" data-active="${user.ativo?"0":"1}">${user.ativo?"Desativar usuário":"Ativar usuário"}</button>`;return `<div class="item"><div class="line"><b>${esc(user.nome)}</b> <span class="badge">${user.role==="admin"?"Administrador":"Operador"}</span></div><div class="line">Usuário: ${esc(user.username)}</div><div class="line">Status: <b>${user.ativo?"Ativo":"Desativado"}</b></div><div class="line">Permissões: ${esc(user.role==="admin"?"Acesso completo":perms)}</div>${controls}</div>`;},"Nenhum usuário cadastrado.");document.querySelectorAll(".edit-user").forEach(btn=>btn.onclick=()=>editUser(Number(btn.dataset.id)));document.querySelectorAll(".toggle-user").forEach(btn=>btn.onclick=()=>toggleUser(Number(btn.dataset.id),btn.dataset.active==="1"));}catch(e){$("usersList").innerHTML=`<div class="msg err">${esc(e.message)}</div>`;}}
+function editUser(id){try{const user=call("listarUsuarios").itens.find(item=>item.id===id);if(!user)return;$("usrId").value=String(user.id);$("usrNome").value=user.nome;$("usrUsername").value=user.username;$("usrPassword").value="";$("userFormTitle").textContent="Editar operador";$("saveUserButton").textContent="Salvar alterações";document.querySelectorAll("[data-perm]").forEach(el=>el.checked=user.permissoes?.[el.dataset.perm]===true);clearMsg($("usrMsg"));$("usrNome").scrollIntoView({behavior:"smooth",block:"center"});}catch(e){showMsg($("usrMsg"),e.message,false);}}
+function saveUser(){clearMsg($("usrMsg"));try{const permissoes={};document.querySelectorAll("[data-perm]").forEach(el=>permissoes[el.dataset.perm]=el.checked);const data=call("salvarUsuario",{id:$("usrId").value?Number($("usrId").value):null,nome:$("usrNome").value,username:$("usrUsername").value,password:$("usrPassword").value,permissoes});showMsg($("usrMsg"),data.message,true);clearUserForm();loadUsers();}catch(e){showMsg($("usrMsg"),e.message,false);}}
+function toggleUser(id,ativo){try{const data=call("alternarUsuario",{id,ativo});loadUsers();showMsg($("usrMsg"),data.message,true);}catch(e){showMsg($("usrMsg"),e.message,false);}}
+
 document.querySelectorAll("[data-screen]").forEach(b=>b.onclick=()=>showScreen(b.dataset.screen));
+$("authLogin").onclick=doLogin;$("authPassword").addEventListener("keydown",e=>{if(e.key==="Enter")doLogin();});$("authUsername").addEventListener("keydown",e=>{if(e.key==="Enter")doLogin();});$("setupCreateAdmin").onclick=createInitialAdmin;$("setupPassword").addEventListener("keydown",e=>{if(e.key==="Enter")createInitialAdmin();});$("logoutButton").onclick=doLogout;$("saveUserButton").onclick=saveUser;$("clearUserForm").onclick=clearUserForm;
 $("salvarCadastro").onclick=salvarCadastro; $("consultarProdutos").onclick=consultarProdutos; $("salvarEntrada").onclick=salvarEntrada; $("abrirLotesEntrada").onclick=abrirLotesEntrada; $("salvarEndereco").onclick=salvarEndereco; $("salvarEnderecoDetalhe").onclick=salvarEnderecoDetalhe; $("consultarEnderecos").onclick=()=>consultarEnderecos(false); $("verEnderecosEntrada").onclick=()=>consultarEnderecos(true); $("consultarEstoque").onclick=consultarEstoque; $("buscar").onclick=buscarOrientacao; $("confirmar").onclick=confirmarSeparacao; $("cancelar").onclick=()=>{$("confirmBox").style.display="none";$("resultado").innerHTML="";}; $("consultarMovimentacoes").onclick=consultarMovimentacoes;
 $("abrirEnderecosCadastro").onclick=abrirEnderecosCadastro; $("fecharEnderecosCadastro").onclick=()=>$("cadEnderecosPopup").classList.remove("open"); $("fecharLotesEntrada").onclick=()=>$("lotesEntradaPopup").classList.remove("open"); $("fecharEnderecosPopup").onclick=()=>$("enderecosPopup").classList.remove("open"); $("fecharEnderecosEntradaPopup").onclick=()=>$("enderecosEntrada").classList.remove("open");
 ["cadEnderecosPopup","lotesEntradaPopup","enderecosPopup","enderecosEntrada"].forEach(id=>$(id).onclick=e=>{ if(e.target.id===id)$(id).classList.remove("open"); });
@@ -561,9 +626,7 @@ $("startScannerEntrada").onclick=()=>scan($("readerEntrada"),$("entNumero"),$("s
 $("startScannerEstoque").onclick=()=>scan($("readerEstoque"),$("estNumero"),$("scanEstoqueMsg"),s=>scannerEstoque=s,$("startScannerEstoque"),consultarEstoque);
 $("startScanner").onclick=()=>scan($("reader"),$("produto"),$("scanMsg"),s=>scanner=s,$("startScanner"));
 
-window.addEventListener("DOMContentLoaded", () => {
-  atualizarDashboardKPIs();
-});
+window.addEventListener("DOMContentLoaded", () => { initializeAuth(); });
 </script>
 </body>
 </html>

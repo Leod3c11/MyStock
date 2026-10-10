@@ -13,6 +13,86 @@ class MyStockDatabase {
     this.migrateLegacyStockSchema();
   }
 
+
+  authStatus() {
+    return this.ok({ setupRequired: this.db.prepare("SELECT COUNT(*) AS total FROM usuarios").get().total === 0 });
+  }
+
+  validateUserInput(data, requirePassword = true) {
+    const nome=String(data.nome||"").trim(), username=String(data.username||"").trim().toLowerCase(), password=String(data.password||"");
+    if(nome.length<2)this.fail("Informe o nome do usuário.");
+    if(!/^[a-z0-9._-]{3,40}$/.test(username))this.fail("O usuário deve ter de 3 a 40 caracteres: letras, números, ponto, hífen ou sublinhado.");
+    if(requirePassword&&password.length<8)this.fail("A senha precisa ter pelo menos 8 caracteres.");
+    if(!requirePassword&&password&&password.length<8)this.fail("A nova senha precisa ter pelo menos 8 caracteres.");
+    return {nome,username,password};
+  }
+
+  passwordRecord(password) {
+    const salt=crypto.randomBytes(16).toString("hex");
+    return {salt,hash:crypto.scryptSync(password,salt,64).toString("hex")};
+  }
+
+  publicUser(row) {
+    let permissoes={};try{permissoes=JSON.parse(row.permissoes_json||"{}");}catch{}
+    return {id:row.id,username:row.username,nome:row.nome,role:row.role,permissoes,ativo:Boolean(row.ativo),criado_em:row.criado_em};
+  }
+
+  getUserById(id) {
+    const row=this.db.prepare("SELECT id,username,nome,role,permissoes_json,ativo,criado_em FROM usuarios WHERE id=?").get(Number(id));
+    return row?this.publicUser(row):null;
+  }
+
+  createInitialAdmin(data) {
+    if(this.db.prepare("SELECT COUNT(*) AS total FROM usuarios").get().total!==0)this.fail("A configuração inicial já foi concluída. Entre com seu usuário.");
+    const {nome,username,password}=this.validateUserInput(data,true), record=this.passwordRecord(password);
+    this.db.prepare("INSERT INTO usuarios(username,nome,password_salt,password_hash,role,permissoes_json,ativo,criado_em) VALUES(?,?,?,?,?,?,1,?)")
+      .run(username,nome,record.salt,record.hash,"admin","{}",this.now());
+    return this.ok({message:"Administrador criado. Entre com seu usuário e senha."});
+  }
+
+  loginUser(data) {
+    const username=String(data.username||"").trim().toLowerCase(), password=String(data.password||"");
+    if(!username||!password)this.fail("Informe usuário e senha.");
+    const row=this.db.prepare("SELECT * FROM usuarios WHERE username=?").get(username);
+    if(!row||!row.ativo)this.fail("Usuário ou senha inválidos, ou conta desativada.");
+    const actual=crypto.scryptSync(password,row.password_salt,64), expected=Buffer.from(row.password_hash,"hex");
+    if(actual.length!==expected.length||!crypto.timingSafeEqual(actual,expected))this.fail("Usuário ou senha inválidos, ou conta desativada.");
+    return this.ok({user:this.publicUser(row)});
+  }
+
+  listUsers() {
+    return this.ok({itens:this.db.prepare("SELECT id,username,nome,role,permissoes_json,ativo,criado_em FROM usuarios ORDER BY role DESC,nome COLLATE NOCASE").all().map(row=>this.publicUser(row))});
+  }
+
+  saveUser(data) {
+    const id=Number(data.id)||0, {nome,username,password}=this.validateUserInput(data,!id);
+    const allowed=["cadastro","produtos","entrada","enderecos","consulta_estoque","separacao","movimentacoes"];
+    const raw=data.permissoes&&typeof data.permissoes==="object"?data.permissoes:{};
+    const permissoes=Object.fromEntries(allowed.map(key=>[key,raw[key]===true]));
+    if(id){
+      const old=this.db.prepare("SELECT id,role FROM usuarios WHERE id=?").get(id);
+      if(!old)this.fail("Usuário não encontrado.");
+      if(old.role==="admin")this.fail("A conta administradora não pode ser alterada por esta tela.");
+      if(password){const rec=this.passwordRecord(password);this.db.prepare("UPDATE usuarios SET username=?,nome=?,password_salt=?,password_hash=?,permissoes_json=? WHERE id=?").run(username,nome,rec.salt,rec.hash,JSON.stringify(permissoes),id);}
+      else this.db.prepare("UPDATE usuarios SET username=?,nome=?,permissoes_json=? WHERE id=?").run(username,nome,JSON.stringify(permissoes),id);
+      return this.ok({message:"Usuário atualizado."});
+    }
+    const rec=this.passwordRecord(password);
+    this.db.prepare("INSERT INTO usuarios(username,nome,password_salt,password_hash,role,permissoes_json,ativo,criado_em) VALUES(?,?,?,?,?,?,1,?)")
+      .run(username,nome,rec.salt,rec.hash,"operador",JSON.stringify(permissoes),this.now());
+    return this.ok({message:"Usuário criado."});
+  }
+
+  toggleUser(data) {
+    const id=Number(data.id), ativo=data.ativo?1:0;
+    if(!Number.isInteger(id)||id<=0)this.fail("Usuário inválido.");
+    const row=this.db.prepare("SELECT id,role FROM usuarios WHERE id=?").get(id);
+    if(!row)this.fail("Usuário não encontrado.");
+    if(row.role==="admin")this.fail("A conta administradora não pode ser desativada por esta tela.");
+    this.db.prepare("UPDATE usuarios SET ativo=? WHERE id=?").run(ativo,id);
+    return this.ok({message:ativo?"Usuário ativado.":"Usuário desativado."});
+  }
+
   close() { this.db.close(); }
 
   // Safely migrates older desktop databases whose estoque table predates lote_id.
@@ -151,6 +231,17 @@ class MyStockDatabase {
         quantidade INTEGER NOT NULL,
         saldo_apos INTEGER NOT NULL,
         data_hora TEXT NOT NULL
+      );
+      CREATE TABLE IF NOT EXISTS usuarios (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        username TEXT NOT NULL UNIQUE COLLATE NOCASE,
+        nome TEXT NOT NULL,
+        password_salt TEXT NOT NULL,
+        password_hash TEXT NOT NULL,
+        role TEXT NOT NULL DEFAULT 'operador',
+        permissoes_json TEXT NOT NULL DEFAULT '{}',
+        ativo INTEGER NOT NULL DEFAULT 1,
+        criado_em TEXT NOT NULL
       );
     `);
   }

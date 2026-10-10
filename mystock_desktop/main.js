@@ -4,6 +4,7 @@ const Database = require("./database");
 
 let mainWindow;
 let database;
+let currentUser = null;
 
 function createWindow() {
   mainWindow = new BrowserWindow({
@@ -45,6 +46,13 @@ app.whenReady().then(() => {
   try {
     database = new Database(app.getPath("userData"));
     const methods = {
+      statusAuth: () => database.authStatus(),
+      criarAdminInicial: value => database.createInitialAdmin(JSON.parse(value || "{}")),
+      login: value => { const result=database.loginUser(JSON.parse(value||"{}")); if(result.ok)currentUser=result.user; return result; },
+      logout: () => { currentUser=null; return {ok:true}; },
+      listarUsuarios: () => database.listUsers(),
+      salvarUsuario: value => database.saveUser(JSON.parse(value||"{}")),
+      alternarUsuario: value => { const data=JSON.parse(value||"{}"); if(currentUser&&Number(data.id)===Number(currentUser.id))throw new Error("Não é permitido desativar a própria conta."); return database.toggleUser(data); },
       salvarProduto: value => database.saveProduct(JSON.parse(value || "{}")),
       salvarEndereco: value => database.saveAddress(JSON.parse(value || "{}")),
       listarEnderecos: value => database.listAddresses(String(value) === "true"),
@@ -56,9 +64,23 @@ app.whenReady().then(() => {
       previewSeparacao: value => database.previewSeparation(JSON.parse(value || "{}")),
       confirmarSeparacao: value => database.confirmSeparation(JSON.parse(value || "{}"))
     };
-    for (const [name, fn] of Object.entries(methods)) {
-      ipcMain.on("mystock:" + name, (event, payload) => {
-        event.returnValue = serializeResult(fn)(event, payload);
+    const permissionByMethod={salvarProduto:"cadastro",listarProdutos:"produtos",registrarEntrada:"entrada",listarLotes:"entrada",salvarEndereco:"enderecos",listarEnderecos:"enderecos",consultarEstoque:"consulta_estoque",previewSeparacao:"separacao",confirmarSeparacao:"separacao",listarMovimentacoes:"movimentacoes"};
+    const adminOnly=new Set(["listarUsuarios","salvarUsuario","alternarUsuario"]);
+    const publicMethods=new Set(["statusAuth","criarAdminInicial","login","logout"]);
+    for(const [name,fn] of Object.entries(methods)){
+      ipcMain.on("mystock:"+name,(event,payload)=>{
+        try{
+          if(!publicMethods.has(name)){
+            if(!currentUser)throw new Error("Faça login para continuar.");
+            const fresh=database.getUserById(currentUser.id);
+            if(!fresh||!fresh.ativo){currentUser=null;throw new Error("Sua conta foi desativada. Faça login com uma conta ativa.");}
+            currentUser=fresh;
+            if(adminOnly.has(name)&&currentUser.role!=="admin")throw new Error("Apenas o administrador pode gerenciar usuários.");
+            const permission=permissionByMethod[name];
+            if(permission&&currentUser.role!=="admin"&&currentUser.permissoes?.[permission]!==true)throw new Error("Seu usuário não tem permissão para esta operação.");
+          }
+          event.returnValue=JSON.stringify(fn(payload));
+        }catch(error){event.returnValue=JSON.stringify({ok:false,error:error&&error.message?error.message:"Falha interna."});}
       });
     }
     createWindow();
