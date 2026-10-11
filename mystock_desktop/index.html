@@ -773,22 +773,21 @@ function renderItems(container, itens, tpl, empty="Nenhum registro encontrado.")
 
 function salvarCadastro(){ clearMsg($("cadMsg")); try{ const data=call("salvarProduto",{numero:$("cadNumero").value.trim(),codigo_barras:$("cadCodigoBarras").value.trim(),nome:$("cadNome").value.trim(),lote:$("cadLote").value.trim(),unidades_por_caixa:parseInt($("cadQc").value,10),estoque_minimo:parseInt($("cadEstoqueMinimo").value||"0",10),fabricacao:$("cadFabricacao").value.trim(),vencimento:$("cadVencimento").value.trim(),endereco:$("cadEndereco").value.trim().toUpperCase(),quantidade_entrada:parseInt($("cadQuantidadeEntrada").value||"0",10)}); showMsg($("cadMsg"),data.message,true); atualizarDashboardKPIs(); }catch(e){ showMsg($("cadMsg"),e.message,false); } }
 function moverProdutoEndereco(produtoId,loteId){
-  if(activeUser?.role!=="admin"){alert("Somente o administrador pode mover estoque.");return;}
+  if(activeUser?.role!=="admin"){alert("Somente o administrador pode gerar tarefas.");return;}
   try{
     const itens=call("consultarEstoque","").itens.filter(x=>Number(x.lote_id)===Number(loteId)&&Number(x.quantidade)>0);
     if(!itens.length){alert("Este lote não possui saldo em endereço algum.");return;}
     const ends=call("listarEnderecos","false").itens;
     const overlay=document.createElement("div");
-    overlay.id="moverEstoqueModal";
+    overlay.id="criarTarefaMovModal";
     overlay.style.cssText="position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,.68);display:flex;align-items:center;justify-content:center;padding:18px;";
     overlay.innerHTML=`<div style="background:var(--card,#fff);color:var(--text,#222);width:min(480px,100%);max-height:90vh;overflow:auto;border-radius:12px;padding:20px;box-shadow:0 10px 40px #0008">
-      <h2 style="margin-top:0">Mover estoque</h2>
-      <p>Selecione o endereço de origem, o destino e a quantidade.</p>
+      <h2 style="margin-top:0">Gerar tarefa de movimentação</h2><p>O saldo só será alterado quando um operador concluir a tarefa no Android.</p>
       <label for="moveOrigem">Origem</label><select id="moveOrigem" style="width:100%;margin:6px 0 14px"></select>
       <label for="moveDestino">Destino</label><select id="moveDestino" style="width:100%;margin:6px 0 14px"></select>
       <div id="moveInfo" class="msg"></div>
       <label for="moveQuantidade">Quantidade (unidades)</label><input id="moveQuantidade" type="number" min="1" step="1" style="width:100%;margin:6px 0 18px" placeholder="Digite a quantidade">
-      <div style="display:flex;gap:10px;justify-content:flex-end"><button type="button" id="moveCancelar" class="secondary">Cancelar</button><button type="button" id="moveConfirmar">Confirmar movimentação</button></div>
+      <div style="display:flex;gap:10px;justify-content:flex-end"><button type="button" id="moveCancelar" class="secondary">Cancelar</button><button type="button" id="moveConfirmar">Criar tarefa</button></div>
     </div>`;
     document.body.appendChild(overlay);
     const origemSel=overlay.querySelector("#moveOrigem"), destinoSel=overlay.querySelector("#moveDestino"), qtdInput=overlay.querySelector("#moveQuantidade"), info=overlay.querySelector("#moveInfo");
@@ -800,7 +799,7 @@ function moverProdutoEndereco(produtoId,loteId){
       destinos.forEach(x=>{const o=document.createElement("option");o.value=x.codigo;o.textContent=x.codigo+" — espaço: "+x.disponivel+" un.";destinoSel.appendChild(o);});
       qtdInput.max=from?from.quantidade:"";
       info.textContent=from?"Saldo na origem: "+from.quantidade+" un.": "Selecione uma origem.";
-      if(!destinos.length){info.textContent="Não há outro endereço com capacidade disponível.";overlay.querySelector("#moveConfirmar").disabled=true;}
+      if(!destinos.length){info.textContent="Não há destino com capacidade disponível.";overlay.querySelector("#moveConfirmar").disabled=true;}
       else overlay.querySelector("#moveConfirmar").disabled=false;
     }
     origemSel.addEventListener("change",atualizarDestinos);
@@ -815,15 +814,15 @@ function moverProdutoEndereco(produtoId,loteId){
         if(!Number.isInteger(quantidade)||quantidade<=0){alert("Informe uma quantidade inteira maior que zero.");return;}
         if(quantidade>Number(from.quantidade)){alert("A quantidade supera o saldo na origem.");return;}
         if(quantidade>Number(to.disponivel)){alert("A quantidade supera o espaço disponível no destino.");return;}
-        if(!confirm("Confirme a movimentação:\nOrigem: "+from.endereco+"\nDestino: "+to.codigo+"\nQuantidade: "+quantidade+" unidade(s)\n\nDeseja continuar?"))return;
-        const r=call("moverEstoque",{produto_id:produtoId,lote_id:loteId,origem:from.endereco,destino:to.codigo,quantidade});
-        overlay.remove();alert(r.message);consultarProdutos();atualizarDashboardKPIs();
-      }catch(e){alert("Falha ao mover estoque: "+e.message);}
+        if(!confirm("Criar tarefa de movimentação?\nOrigem: "+from.endereco+"\nDestino: "+to.codigo+"\nQuantidade: "+quantidade+" unidade(s)\n\nO estoque não será alterado até o operador concluir."))return;
+        const r=call("criarTarefaMovimentacao",{produto_id:produtoId,lote_id:loteId,origem:from.endereco,destino:to.codigo,quantidade});
+        overlay.remove();alert(r.message);
+      }catch(e){alert("Falha ao criar tarefa: "+e.message);}
     };
     atualizarDestinos();
-  }catch(e){alert("Falha ao mover estoque: "+e.message);}
+  }catch(e){alert("Falha ao preparar tarefa: "+e.message);}
 }
-function consultarProdutos(){ try{ const data=call("listarProdutos",$("prodFiltro").value.trim()); renderItems($("produtosResultado"),data.itens,item=>`<div class="item"><div class="line"><b>${esc(item.numero)} - ${esc(item.nome)}</b></div>${item.codigo_barras?`<div class="line"><b>QR / código:</b> ${esc(item.codigo_barras)}</div>`:""}<div class="line"><b>Lote:</b> ${esc(item.lote)}</div><div class="line"><b>QC:</b> ${esc(item.unidades_por_caixa)} unidade(s)</div><div class="line"><b>Fabricação:</b> ${esc(item.fabricacao)}</div><div class="line"><b>Vencimento:</b> ${esc(item.vencimento)}</div><span class="strong">Saldo do lote: ${esc(item.saldo_total)} unidade(s)</span><div class="line"><b>Saldo total do produto:</b> ${esc(item.saldo_produto)} unidade(s)</div><div class="line"><b>Estoque mínimo:</b> ${esc(item.estoque_minimo)} unidade(s)</div><button class="secondary" onclick="editarProdutoPorId(${item.produto_id},${item.lote_id})">Editar produto / mínimo</button>${activeUser?.role==="admin"?`<button class="secondary" onclick="moverProdutoEndereco(${item.produto_id},${item.lote_id})">Mover para outro endereço</button>`:""}</div>`); }catch(e){ $("produtosResultado").innerHTML=`<div class="msg err">${esc(e.message)}</div>`; } }
+function consultarProdutos(){ try{ const data=call("listarProdutos",$("prodFiltro").value.trim()); renderItems($("produtosResultado"),data.itens,item=>`<div class="item"><div class="line"><b>${esc(item.numero)} - ${esc(item.nome)}</b></div>${item.codigo_barras?`<div class="line"><b>QR / código:</b> ${esc(item.codigo_barras)}</div>`:""}<div class="line"><b>Lote:</b> ${esc(item.lote)}</div><div class="line"><b>QC:</b> ${esc(item.unidades_por_caixa)} unidade(s)</div><div class="line"><b>Fabricação:</b> ${esc(item.fabricacao)}</div><div class="line"><b>Vencimento:</b> ${esc(item.vencimento)}</div><span class="strong">Saldo do lote: ${esc(item.saldo_total)} unidade(s)</span><div class="line"><b>Saldo total do produto:</b> ${esc(item.saldo_produto)} unidade(s)</div><div class="line"><b>Estoque mínimo:</b> ${esc(item.estoque_minimo)} unidade(s)</div><button class="secondary" onclick="editarProdutoPorId(${item.produto_id},${item.lote_id})">Editar produto / mínimo</button>${activeUser?.role==="admin"?`<button class="secondary" onclick="moverProdutoEndereco(${item.produto_id},${item.lote_id})">Gerar tarefa de movimentação</button>`:""}</div>`); }catch(e){ $("produtosResultado").innerHTML=`<div class="msg err">${esc(e.message)}</div>`; } }
 function salvarEntrada(){ clearMsg($("entMsg")); const botao=$("salvarEntrada"); try{ botao.disabled=true; const data=call("registrarEntrada",{numero:$("entNumero").value.trim(),lote:$("entLote").value.trim(),endereco:$("entEndereco").value.trim().toUpperCase(),quantidade:parseInt($("entQuantidade").value,10)}); showMsg($("entMsg"),data.message,true); $("entQuantidade").value=""; if(typeof atualizarDashboardKPIs==="function")atualizarDashboardKPIs(); if($("screen-estoque")?.classList.contains("active"))consultarEstoque(); if($("screen-movimentacoes")?.classList.contains("active"))consultarMovimentacoes(); }catch(e){ showMsg($("entMsg"),e.message,false); }finally{botao.disabled=false;} }
 function abrirLotesEntrada(){ clearMsg($("entMsg")); const produto=$("entNumero").value.trim(); if(!produto){ showMsg($("entMsg"),"Informe o produto antes de selecionar o lote.",false); return; } $("lotesEntradaPopup").classList.add("open"); try{ const data=call("listarLotes",produto); renderItems($("lotesEntradaLista"),data.itens,item=>`<div class="item"><div class="line"><b>${esc(item.numero)} - ${esc(item.nome)}</b></div><div class="line"><b>Lote:</b> ${esc(item.lote)}</div><div class="line"><b>QC:</b> ${esc(item.unidades_por_caixa)}</div><div class="line"><b>Fabricação:</b> ${esc(item.fabricacao)}</div><div class="line"><b>Vencimento:</b> ${esc(item.vencimento)}</div><button class="secondary escolher-lote" data-lote="${esc(item.lote)}">Usar este lote</button></div>`); document.querySelectorAll(".escolher-lote").forEach(b=>b.onclick=()=>{ $("entLote").value=b.dataset.lote; $("lotesEntradaPopup").classList.remove("open"); showMsg($("entMsg"),`Lote selecionado: ${b.dataset.lote}`,true); }); }catch(e){ $("lotesEntradaLista").innerHTML=`<div class="msg err">${esc(e.message)}</div>`; } }
 function renderEnderecos(container,itens,selectable=false){ renderItems(container,itens,(item,idx)=>`<div class="item"><div class="line"><b>Endereço:</b> ${esc(item.codigo)}</div><div class="line"><b>Ocupado:</b> ${esc(item.ocupado)}</div><div class="line"><b>Limite:</b> ${esc(item.capacidade_maxima)}</div><span class="strong">Disponível: ${esc(item.disponivel)}</span>${selectable?`<button class="secondary escolher-endereco" data-codigo="${esc(item.codigo)}">Usar este endereço</button>`:`<button class="secondary editar-endereco" data-index="${idx}">Abrir / editar capacidade</button>`}</div>`); if(selectable){ document.querySelectorAll(".escolher-endereco").forEach(b=>b.onclick=()=>{ $("entEndereco").value=b.dataset.codigo; $("enderecosEntrada").classList.remove("open"); showMsg($("entMsg"),`Endereço selecionado: ${b.dataset.codigo}`,true); }); } else { enderecosCache=itens; document.querySelectorAll(".editar-endereco").forEach(b=>b.onclick=()=>{ $("enderecosPopup").classList.remove("open"); abrirDetalheEndereco(enderecosCache[parseInt(b.dataset.index,10)]); }); } }
