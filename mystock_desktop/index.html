@@ -453,6 +453,12 @@
       <div id="lanSessionsSummary" class="line" style="margin-top:12px">Carregando sessões...</div>
       <div id="lanSessionsList"></div>
     </section>
+    <section>
+      <h2>Cópia de segurança</h2>
+      <p class="line">Gere uma cópia consistente do banco de dados SQLite. Guarde o arquivo em outro disco ou local seguro; essa cópia não substitui a proteção contra falha do próprio computador.</p>
+      <button id="createBackup">Criar cópia de segurança</button>
+      <div id="backupMsg" class="msg" role="status" aria-live="polite"></div>
+    </section>
   </div>
 </main>
 
@@ -682,6 +688,18 @@ function applyUserPermissions(){
 }
 function doLogin(){showAuthError("");try{const result=call("login",{username:$("authUsername").value,password:$("authPassword").value});finishLogin(result.user);$("authPassword").value="";}catch(e){showAuthError(e.message);}}
 function createInitialAdmin(){showAuthError("");try{call("criarAdminInicial",{nome:$("setupName").value,username:$("setupUsername").value,password:$("setupPassword").value});$("authSetupPane").style.display="none";$("authLoginPane").style.display="block";$("authUsername").value=$("setupUsername").value.trim().toLowerCase();$("authPassword").value="";$("setupPassword").value="";showAuthError("Administrador criado. Entre com a senha cadastrada.");}catch(e){showAuthError(e.message);}}
+async function createBackup(){
+  const button=$("createBackup"), message=$("backupMsg");
+  if(!activeUser||activeUser.role!=="admin"){showMsg(message,"Somente o administrador pode criar cópias de segurança.",false);return;}
+  button.disabled=true;button.textContent="Criando cópia...";
+  try{
+    const result=await window.MyStock.backupDatabase();
+    if(result?.canceled){showMsg(message,"Operação cancelada.",false);return;}
+    if(!result?.ok)throw new Error(result?.message||"Não foi possível criar a cópia.");
+    showMsg(message,"Cópia criada com sucesso: "+result.path,true);
+  }catch(error){showMsg(message,error?.message||"Falha ao criar a cópia.",false);}
+  finally{button.disabled=false;button.textContent="Criar cópia de segurança";}
+}
 function doLogout(){try{call("logout");}catch(e){}activeUser=null;document.querySelectorAll(".screen").forEach(el=>el.classList.remove("active"));initializeAuth();}
 function clearUserForm(){$("usrId").value="";$("usrNome").value="";$("usrUsername").value="";$("usrPassword").value="";$("userFormTitle").textContent="Cadastrar operador";$("saveUserButton").textContent="Salvar usuário";document.querySelectorAll("[data-perm]").forEach(el=>el.checked=false);clearMsg($("usrMsg"));}
 function loadUsers(){try{const data=call("listarUsuarios");renderItems($("usersList"),data.itens,user=>{const perms=Object.keys(permissionLabels).filter(key=>user.permissoes?.[key]).map(key=>permissionLabels[key]).join(", ")||"Sem permissões operacionais";const controls=user.role==="admin"?"":`<button class="secondary edit-user" data-id="${user.id}">Editar / redefinir senha</button><button class="${user.ativo?"danger":"secondary"} toggle-user" data-id="${user.id}" data-active="${user.ativo?"0":"1"}">${user.ativo?"Desativar usuário":"Ativar usuário"}</button>`;return `<div class="item"><div class="line"><b>${esc(user.nome)}</b> <span class="badge">${user.role==="admin"?"Administrador":"Operador"}</span></div><div class="line">Usuário: ${esc(user.username)}</div><div class="line">Status: <b>${user.ativo?"Ativo":"Desativado"}</b></div><div class="line">Permissões: ${esc(user.role==="admin"?"Acesso completo":perms)}</div>${controls}</div>`;},"Nenhum usuário cadastrado.");document.querySelectorAll(".edit-user").forEach(btn=>btn.onclick=()=>editUser(Number(btn.dataset.id)));document.querySelectorAll(".toggle-user").forEach(btn=>btn.onclick=()=>toggleUser(Number(btn.dataset.id),btn.dataset.active==="1"));}catch(e){$("usersList").innerHTML=`<div class="msg err">${esc(e.message)}</div>`;}}
@@ -739,6 +757,7 @@ function toggleUser(id,ativo){try{const data=call("alternarUsuario",{id,ativo});
 
 document.querySelectorAll("[data-screen]").forEach(b=>b.onclick=()=>showScreen(b.dataset.screen));
 if($("refreshLanSessions"))$("refreshLanSessions").onclick=loadLanSessions;
+if($("createBackup"))$("createBackup").onclick=createBackup;
 setInterval(()=>{if($("screen-usuarios")?.classList.contains("active")&&activeUser?.role==="admin")loadLanSessions();},10000);
 $("authLogin").onclick=doLogin;$("authPassword").addEventListener("keydown",e=>{if(e.key==="Enter")doLogin();});$("authUsername").addEventListener("keydown",e=>{if(e.key==="Enter")doLogin();});$("setupCreateAdmin").onclick=createInitialAdmin;$("setupPassword").addEventListener("keydown",e=>{if(e.key==="Enter")createInitialAdmin();});$("logoutButton").onclick=doLogout;$("saveUserButton").onclick=saveUser;$("clearUserForm").onclick=clearUserForm;
 $("salvarCadastro").onclick=salvarCadastro; $("consultarProdutos").onclick=consultarProdutos; $("salvarEntrada").onclick=salvarEntrada; $("abrirLotesEntrada").onclick=abrirLotesEntrada; $("salvarEndereco").onclick=salvarEndereco; $("salvarEnderecoDetalhe").onclick=salvarEnderecoDetalhe; $("consultarEnderecos").onclick=()=>consultarEnderecos(false); $("verEnderecosEntrada").onclick=()=>consultarEnderecos(true); $("consultarEstoque").onclick=consultarEstoque; $("buscar").onclick=buscarOrientacao; $("confirmar").onclick=confirmarSeparacao; $("cancelar").onclick=()=>{$("confirmBox").style.display="none";$("resultado").innerHTML="";}; $("consultarMovimentacoes").onclick=consultarMovimentacoes;
