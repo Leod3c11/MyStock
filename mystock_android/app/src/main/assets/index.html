@@ -286,6 +286,10 @@
     <div class="process-group" data-group="operacao">
       <div class="process-title">Operações de Separação</div>
       <div class="menu-grid">
+        <button class="menu-card" data-screen="tarefas-movimentacao">
+          <div class="card-icon"><svg width="22" height="22" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5h6m-6 4h6m-6 4h6m-8 5h10a2 2 0 002-2V4a2 2 0 00-2-2H7a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg></div>
+          <div class="card-body"><div class="card-header-line"><strong>Tarefas de movimentação</strong><span class="badge">Estoque</span></div><span>Executar transferências de saldo solicitadas pelo administrador.</span></div>
+        </button>
         <button class="menu-card" data-screen="separacao">
           <div class="card-icon"><svg width="22" height="22" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"></path></svg></div>
           <div class="card-body">
@@ -384,6 +388,11 @@
       <section id="separacaoProdutoBox" style="display:none"><h2>Etapa 3 — Separar item selecionado</h2><div id="separacaoItemResumo"></div><h3>Bipar Produto (opcional)</h3><div id="reader"></div><button id="startScanner">Abrir câmera</button><div id="scanMsg" class="msg"></div><label>Número do produto</label><input id="produto" inputmode="numeric" readonly><label>Quantidade solicitada (unidades)</label><input id="quantidade" inputmode="numeric" readonly><button id="buscar">Ver orientação de separação</button><div id="resultado"></div></section>
       <section id="confirmBox" style="display:none"><h2>Confirmar Separação</h2><div id="confirmItens"></div><button id="confirmar">Confirmar e baixar estoque</button><button id="cancelar" class="danger">Cancelar</button><div id="confirmMsg" class="msg"></div></section>
     </div>
+  </div>
+
+  <div id="screen-tarefas-movimentacao" class="screen">
+    <div class="screen-title"><button class="back-btn" data-screen="menu">Voltar</button><h2>Tarefas de movimentação</h2></div>
+    <section><h2>Tarefas pendentes</h2><p>Confira o produto, lote, origem, destino e quantidade antes de executar.</p><button id="atualizarTarefasMovimentacao">Atualizar tarefas</button><div id="tarefasMovimentacaoResultado"></div></section>
   </div>
 
   <div id="screen-movimentacoes" class="screen">
@@ -565,6 +574,7 @@ function showScreen(name){
   const destino=$(`screen-${name}`);
   if(!destino) return;
   destino.classList.add("active");
+  if(name==="tarefas-movimentacao") carregarTarefasMovimentacao();
   scrollTo(0,0);
 }
 
@@ -631,10 +641,37 @@ function salvarEnderecoDetalhe(){ if(!enderecoDetalheAtual)return; clearMsg($("e
 function consultarEstoque(){ try{ const data=call("consultarEstoque",$("estNumero").value.trim()); renderItems($("estoqueResultado"),data.itens,item=>`<div class="item"><div class="line"><b>${esc(item.numero)} - ${esc(item.nome)}</b></div>${item.codigo_barras?`<div class="line"><b>QR / código:</b> ${esc(item.codigo_barras)}</div>`:""}<div class="line"><b>Lote:</b> ${esc(item.lote)}</div><div class="line"><b>Endereço:</b> ${esc(item.endereco)}</div><span class="strong">Saldo: ${esc(item.quantidade)} unidade(s)</span><div class="line" style="margin-top:6px;"><b>QC:</b> ${esc(item.unidades_por_caixa)} unidade(s) por caixa</div><div class="line"><b>Fabricação:</b> ${esc(item.fabricacao)}</div><div class="line"><b>Vencimento:</b> ${esc(item.vencimento)}</div></div>`); }catch(e){ $("estoqueResultado").innerHTML=`<div class="msg err">${esc(e.message)}</div>`; } }
 function buscarOrientacao(){ $("confirmBox").style.display="none"; try{if(!currentOrderId||!currentOrderItemId)throw Error("Valide uma ordem e selecione um item pendente antes de continuar.");currentPreview=call("previewSeparacao",{numero:$("produto").value.trim(),quantidade:parseInt($("quantidade").value,10)});if(String(currentPreview.produto)!==String($("produto").value)||Number(currentPreview.quantidade_pedida)!==Number($("quantidade").value))throw Error("Produto ou quantidade não corresponde ao item selecionado na ordem.");$("resultado").innerHTML=`<div class="item"><b>Produto:</b> ${esc(currentPreview.produto)} - ${esc(currentPreview.nome)}<br><b>Solicitado:</b> ${esc(currentPreview.quantidade_pedida)} unidade(s)</div>`; $("confirmItens").innerHTML=currentPreview.orientacoes.map((item,idx)=>`<div class="item"><b>Item ${idx+1}</b><div class="line"><b>Lote:</b> ${esc(item.lote)}</div><div class="line"><b>Endereço:</b> ${esc(item.endereco)}</div><span class="strong">Separar: ${esc(item.qtd_operador)} ${esc(item.unidade_operador)}</span><label>Digite a quantidade de ${esc(item.unidade_operador)} que você pegou</label><input class="confirmInput" inputmode="numeric" data-index="${idx}"></div>`).join(""); $("confirmBox").style.display="block"; $("confirmar").disabled=false; }catch(e){ $("resultado").innerHTML=`<div class="msg err">${esc(e.message)}</div>`; } }
 function confirmarSeparacao(){ if(!currentPreview||!currentOrderId||!currentOrderItemId)return; try{ const confirmacoes=[...document.querySelectorAll(".confirmInput")].map(i=>({index:parseInt(i.dataset.index,10),quantidade_confirmada:parseInt(i.value,10)})); const data=call("confirmarSeparacao",{token:currentPreview.token,confirmacoes,pedido_id:currentOrderId,pedido_item_id:currentOrderItemId}); showMsg($("confirmMsg"),data.message,true); $("confirmar").disabled=true; currentOrderItemId=0;currentPreview=null;$("separacaoProdutoBox").style.display="none";$("confirmBox").style.display="none";$("ordemListaSection").style.display="block";$("resultado").innerHTML="";carregarOrdemAtual(); }catch(e){ showMsg($("confirmMsg"),e.message,false); } }
+function carregarTarefasMovimentacao(){
+  try{
+    const data=call("listarTarefasMovimentacao","PENDENTE");
+    const itens=data.itens||[];
+    renderItems($("tarefasMovimentacaoResultado"),itens,t=>`<div class="item">
+      <div class="line"><b>Tarefa #${esc(t.id)} — ${esc(t.status)}</b></div>
+      <div class="line"><b>Produto:</b> ${esc(t.produto_numero)} — ${esc(t.produto_nome)}</div>
+      <div class="line"><b>Lote:</b> ${esc(t.lote)}</div>
+      <div class="line"><b>Origem:</b> ${esc(t.origem)}</div>
+      <div class="line"><b>Destino:</b> ${esc(t.destino)}</div>
+      <div class="line"><b>Quantidade solicitada:</b> ${esc(t.quantidade)} unidade(s)</div>
+      <div class="line"><b>Solicitada por:</b> ${esc(t.solicitado_por)} · ${esc(t.criado_em)}</div>
+      <label for="tarefaQtd${esc(t.id)}">Quantidade efetivamente movimentada</label>
+      <input id="tarefaQtd${esc(t.id)}" type="number" min="1" step="1" value="${esc(t.quantidade)}" inputmode="numeric">
+      <button class="executar-tarefa-mov" data-id="${esc(t.id)}">Confirmar e concluir tarefa</button>
+    </div>`,"Não há tarefas de movimentação pendentes.");
+    document.querySelectorAll(".executar-tarefa-mov").forEach(btn=>btn.onclick=()=>{
+      const id=Number(btn.dataset.id), input=$("tarefaQtd"+id), quantidade=Number(input.value);
+      if(!Number.isInteger(quantidade)||quantidade<=0){alert("Informe uma quantidade inteira maior que zero.");return;}
+      const tarefa=itens.find(x=>Number(x.id)===id);
+      if(!tarefa)return;
+      if(!confirm("Confirme a execução da tarefa #"+id+"\n"+tarefa.origem+" → "+tarefa.destino+"\nQuantidade: "+quantidade+" unidade(s)\n\nO saldo será atualizado agora. Continuar?"))return;
+      try{const r=call("executarTarefaMovimentacao",{id,quantidade_confirmada:quantidade});alert(r.message);carregarTarefasMovimentacao();if($("screen-estoque")?.classList.contains("active"))consultarEstoque();}catch(e){alert("Não foi possível concluir a tarefa: "+e.message);}
+    });
+  }catch(e){$("tarefasMovimentacaoResultado").innerHTML='<div class="msg err">'+esc(e.message)+'</div>';}
+}
+
 function consultarMovimentacoes(){ try{ const data=call("listarMovimentacoes",$("movNumero").value.trim()); renderItems($("movResultado"),data.itens,item=>`<div class="item"><span class="badge">${esc(item.tipo)}</span><div class="line"><b>${esc(item.produto_numero)} - ${esc(item.produto_nome)}</b></div><div class="line"><b>Lote:</b> ${esc(item.lote)}</div><div class="line"><b>Endereço:</b> ${esc(item.endereco)}</div><div class="line"><b>Quantidade:</b> ${esc(item.quantidade)}</div><div class="line"><b>Saldo após:</b> ${esc(item.saldo_apos)}</div><div class="line"><b>Data/hora:</b> ${esc(item.data_hora)}</div></div>`); }catch(e){ $("movResultado").innerHTML=`<div class="msg err">${esc(e.message)}</div>`; } }
 
 document.querySelectorAll("[data-screen]").forEach(b=>b.onclick=()=>showScreen(b.dataset.screen));
-$("salvarCadastro").onclick=salvarCadastro; $("consultarProdutos").onclick=consultarProdutos; $("salvarEntrada").onclick=salvarEntrada; $("abrirLotesEntrada").onclick=abrirLotesEntrada; $("salvarEndereco").onclick=salvarEndereco; $("salvarEnderecoDetalhe").onclick=salvarEnderecoDetalhe; $("consultarEnderecos").onclick=()=>consultarEnderecos(false); $("verEnderecosEntrada").onclick=()=>consultarEnderecos(true); $("consultarEstoque").onclick=consultarEstoque; $("buscar").onclick=buscarOrientacao; $("confirmar").onclick=confirmarSeparacao; $("cancelar").onclick=()=>{currentOrderItemId=0;currentPreview=null;$("confirmBox").style.display="none";$("ordemListaSection").style.display="block";$("resultado").innerHTML="";}; $("consultarMovimentacoes").onclick=consultarMovimentacoes;
+$("salvarCadastro").onclick=salvarCadastro; $("consultarProdutos").onclick=consultarProdutos; $("salvarEntrada").onclick=salvarEntrada; $("abrirLotesEntrada").onclick=abrirLotesEntrada; $("salvarEndereco").onclick=salvarEndereco; $("salvarEnderecoDetalhe").onclick=salvarEnderecoDetalhe; $("consultarEnderecos").onclick=()=>consultarEnderecos(false); $("verEnderecosEntrada").onclick=()=>consultarEnderecos(true); $("consultarEstoque").onclick=consultarEstoque; $("buscar").onclick=buscarOrientacao; $("confirmar").onclick=confirmarSeparacao; $("cancelar").onclick=()=>{currentOrderItemId=0;currentPreview=null;$("confirmBox").style.display="none";$("ordemListaSection").style.display="block";$("resultado").innerHTML="";}; $("consultarMovimentacoes").onclick=consultarMovimentacoes; $("atualizarTarefasMovimentacao").onclick=carregarTarefasMovimentacao;
 $("abrirEnderecosCadastro").onclick=abrirEnderecosCadastro; $("fecharEnderecosCadastro").onclick=()=>$("cadEnderecosPopup").classList.remove("open"); $("fecharLotesEntrada").onclick=()=>$("lotesEntradaPopup").classList.remove("open"); $("fecharEnderecosPopup").onclick=()=>$("enderecosPopup").classList.remove("open"); $("fecharEnderecosEntradaPopup").onclick=()=>$("enderecosEntrada").classList.remove("open");
 ["cadEnderecosPopup","lotesEntradaPopup","enderecosPopup","enderecosEntrada"].forEach(id=>$(id).onclick=e=>{ if(e.target.id===id)$(id).classList.remove("open"); });
 attachDateMask("cadFabricacao"); attachDateMask("cadVencimento");
