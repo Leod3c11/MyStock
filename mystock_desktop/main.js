@@ -54,6 +54,10 @@ function startLanServer(db) {
     listarEnderecos: value => db.listAddresses(String(value) === "true"),
     registrarEntrada: value => db.registerEntry(JSON.parse(value || "{}")),
     moverEstoque: value => db.moveStock(JSON.parse(value || "{}")),
+    criarTarefaMovimentacao: value => db.createMoveTask(JSON.parse(value || "{}"), "ADMIN_SESSION"),
+    listarTarefasMovimentacao: value => db.listMoveTasks(String(value || ""), "operador"),
+    executarTarefaMovimentacao: value => db.executeMoveTask(JSON.parse(value || "{}"), "OPERATOR_SESSION"),
+    cancelarTarefaMovimentacao: value => db.cancelMoveTask(JSON.parse(value || "{}").id, "ADMIN_SESSION"),
     consultarEstoque: value => db.listStock(String(value || "")),
     listarLotes: value => db.listLots(String(value || "")),
     listarProdutos: value => db.listProducts(String(value || "")),
@@ -168,7 +172,10 @@ function startLanServer(db) {
       try { payload = JSON.parse(payload); } catch {}
       let result;
       try {
-        result = method(typeof payload === "object" && payload !== null ? JSON.stringify(payload) : String(payload));
+        if(name==="criarTarefaMovimentacao") result=db.createMoveTask(payload,sessionData.nome);
+        else if(name==="executarTarefaMovimentacao") result=db.executeMoveTask(payload,sessionData.nome);
+        else if(name==="cancelarTarefaMovimentacao") result=db.cancelMoveTask(payload.id,sessionData.nome);
+        else result = method(typeof payload === "object" && payload !== null ? JSON.stringify(payload) : String(payload));
       } catch (operationError) {
         if (user.role === "operador" && !["listarAuditoria","listarAuditoriaOperadores"].includes(name)) {
           try { db.recordAudit({usuario_id:user.id,operador_nome:user.nome,operador_username:user.username,dispositivo:"Android",endereco_ip:sessionData.ip,acao:name,sucesso:false,detalhes:{erro:String(operationError.message||"Falha na operação").slice(0,300)}}); } catch {}
@@ -349,6 +356,10 @@ app.whenReady().then(() => {
       listarEnderecos: value => database.listAddresses(String(value) === "true"),
       registrarEntrada: value => database.registerEntry(JSON.parse(value || "{}")),
       moverEstoque: value => { if(!currentUser||currentUser.role!=="admin") throw new Error("Somente o administrador pode mover estoque entre endereços."); return database.moveStock(JSON.parse(value||"{}")); },
+      criarTarefaMovimentacao: value => { if(!currentUser||currentUser.role!=="admin") throw new Error("Somente o administrador pode criar tarefas."); return database.createMoveTask(JSON.parse(value||"{}"),currentUser.nome); },
+      listarTarefasMovimentacao: value => database.listMoveTasks(String(value||""),currentUser?.role||"operador"),
+      executarTarefaMovimentacao: value => database.executeMoveTask(JSON.parse(value||"{}"),currentUser?.nome||"Operador"),
+      cancelarTarefaMovimentacao: value => { if(!currentUser||currentUser.role!=="admin") throw new Error("Somente o administrador pode cancelar tarefas."); return database.cancelMoveTask(JSON.parse(value||"{}").id,currentUser.nome); },
       consultarEstoque: value => database.listStock(String(value || "")),
       listarLotes: value => database.listLots(String(value || "")),
       listarProdutos: value => database.listProducts(String(value || "")),
