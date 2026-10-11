@@ -175,7 +175,6 @@ function startLanServer(db) {
         if(name==="criarTarefaMovimentacao") result=db.createMoveTask(payload,sessionData.nome);
         else if(name==="executarTarefaMovimentacao") result=db.executeMoveTask(payload,sessionData.nome);
         else if(name==="cancelarTarefaMovimentacao") result=db.cancelMoveTask(payload.id,sessionData.nome);
-        else if(name==="criarTarefaMovimentacao") result=db.createMoveTask(payload,sessionData.nome);
         else result = method(typeof payload === "object" && payload !== null ? JSON.stringify(payload) : String(payload));
       } catch (operationError) {
         if (user.role === "operador" && !["listarAuditoria","listarAuditoriaOperadores"].includes(name)) {
