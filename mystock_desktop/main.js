@@ -24,13 +24,14 @@ function startLanServer(db) {
     consultarEstoque: value => db.listStock(String(value || "")),
     listarLotes: value => db.listLots(String(value || "")),
     listarProdutos: value => db.listProducts(String(value || "")),
+    listarEstoqueMinimo: () => db.listLowStock(),
     listarMovimentacoes: value => db.listMovements(String(value || "")),
     previewSeparacao: value => db.previewSeparation(JSON.parse(value || "{}")),
     confirmarSeparacao: value => db.confirmSeparation(JSON.parse(value || "{}"))
   };
   const permissionByMethod = {
     salvarProduto:"cadastro", editarProduto:"cadastro", listarProdutos:"produtos", criarPedido:"separacao", listarPedidos:"separacao", obterPedido:"separacao", registrarEntrada:"entrada",
-    listarLotes:"entrada", salvarEndereco:"enderecos", listarEnderecos:"enderecos",
+    listarLotes:"entrada", salvarEndereco:"enderecos", listarEnderecos:"enderecos", listarEstoqueMinimo:"produtos",
     consultarEstoque:"consulta_estoque", previewSeparacao:"separacao",
     confirmarSeparacao:"separacao", listarMovimentacoes:"movimentacoes"
   };
@@ -264,11 +265,12 @@ app.whenReady().then(() => {
       consultarEstoque: value => database.listStock(String(value || "")),
       listarLotes: value => database.listLots(String(value || "")),
       listarProdutos: value => database.listProducts(String(value || "")),
+      listarEstoqueMinimo: () => database.listLowStock(),
       listarMovimentacoes: value => database.listMovements(String(value || "")),
       previewSeparacao: value => database.previewSeparation(JSON.parse(value || "{}")),
       confirmarSeparacao: value => database.confirmSeparation(JSON.parse(value || "{}"))
     };
-    const permissionByMethod={salvarProduto:"cadastro",editarProduto:"cadastro",listarProdutos:"produtos",criarPedido:"separacao",listarPedidos:"separacao",obterPedido:"separacao",registrarEntrada:"entrada",listarLotes:"entrada",salvarEndereco:"enderecos",listarEnderecos:"enderecos",consultarEstoque:"consulta_estoque",previewSeparacao:"separacao",confirmarSeparacao:"separacao",listarMovimentacoes:"movimentacoes"};
+    const permissionByMethod={salvarProduto:"cadastro",editarProduto:"cadastro",listarProdutos:"produtos",listarEstoqueMinimo:"produtos",criarPedido:"separacao",listarPedidos:"separacao",obterPedido:"separacao",registrarEntrada:"entrada",listarLotes:"entrada",salvarEndereco:"enderecos",listarEnderecos:"enderecos",consultarEstoque:"consulta_estoque",previewSeparacao:"separacao",confirmarSeparacao:"separacao",listarMovimentacoes:"movimentacoes"};
     const adminOnly=new Set(["listarUsuarios","salvarUsuario","alternarUsuario","listarSessoesLan"]);
     const publicMethods=new Set(["statusAuth","criarAdminInicial","login","logout","enderecoLan"]);
     for(const [name,fn] of Object.entries(methods)){
