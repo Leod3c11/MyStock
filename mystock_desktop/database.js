@@ -64,6 +64,43 @@ class MyStockDatabase {
     return this.ok({itens:this.db.prepare("SELECT id,username,nome,role,permissoes_json,ativo,criado_em FROM usuarios ORDER BY role DESC,nome COLLATE NOCASE").all().map(row=>this.publicUser(row))});
   }
 
+  listAuditOperators() {
+    return this.ok({itens:this.db.prepare("SELECT id,nome,username,ativo FROM usuarios WHERE role='operador' ORDER BY nome COLLATE NOCASE").all().map(u=>({...u,ativo:Boolean(u.ativo)}))});
+  }
+
+  recordAudit(data = {}) {
+    const userId=Number(data.usuario_id)||null;
+    const nome=String(data.operador_nome||"Operador").slice(0,100);
+    const username=String(data.operador_username||"").slice(0,40);
+    const device=String(data.dispositivo||"Android").slice(0,40);
+    const ip=String(data.endereco_ip||"").slice(0,80);
+    const action=String(data.acao||"").slice(0,80);
+    const success=data.sucesso===false?0:1;
+    const payload=data.detalhes&&typeof data.detalhes==="object"?data.detalhes:{};
+    const safe={};
+    const allowed=["numero","codigo_barras","nome","lote","endereco","quantidade","quantidade_entrada","estoque_minimo","produto_id","lote_id","pedido_id","pedido_item_id","cliente","itens","filtro","ativo","capacidade_maxima","quantidade_confirmada"];
+    for(const key of allowed) if(payload[key]!==undefined){
+      const value=payload[key];
+      safe[key]=Array.isArray(value)?value.slice(0,30).map(x=>x&&typeof x==="object"?Object.fromEntries(Object.entries(x).filter(([k])=>["produto_id","quantidade","index","quantidade_confirmada"].includes(k))):x):String(value).slice(0,500);
+    }
+    this.db.prepare("INSERT INTO auditoria(usuario_id,operador_nome,operador_username,dispositivo,endereco_ip,acao,detalhes,sucesso,data_hora) VALUES(?,?,?,?,?,?,?,?,?)")
+      .run(userId,nome,username,device,ip,action,JSON.stringify(safe),success,new Date().toISOString());
+    return this.ok();
+  }
+
+  listAudit(data = {}) {
+    const userId=Number(data.usuario_id)||0;
+    if(!userId)this.fail("Selecione um operador para consultar a auditoria.");
+    const from=String(data.de||"").trim(), to=String(data.ate||"").trim(), action=String(data.acao||"").trim();
+    let sql="SELECT id,operador_nome,operador_username,dispositivo,endereco_ip,acao,detalhes,sucesso,data_hora FROM auditoria WHERE usuario_id=?";
+    const params=[userId];
+    if(from){sql+=" AND substr(data_hora,1,10)>=?";params.push(from);}
+    if(to){sql+=" AND substr(data_hora,1,10)<=?";params.push(to);}
+    if(action){sql+=" AND acao=?";params.push(action);}
+    sql+=" ORDER BY data_hora DESC,id DESC LIMIT 1000";
+    return this.ok({itens:this.rows(sql,params).map(row=>{let detalhes={};try{detalhes=JSON.parse(row.detalhes||"{}");}catch{}return {...row,detalhes,sucesso:Boolean(row.sucesso)};})});
+  }
+
   saveUser(data) {
     const id=Number(data.id)||0, {nome,username,password}=this.validateUserInput(data,!id);
     const allowed=["cadastro","produtos","entrada","enderecos","consulta_estoque","separacao","movimentacoes"];
@@ -260,6 +297,20 @@ class MyStockDatabase {
         status TEXT NOT NULL DEFAULT 'PENDENTE',
         UNIQUE(pedido_id, produto_id)
       );
+      CREATE TABLE IF NOT EXISTS auditoria (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        usuario_id INTEGER,
+        operador_nome TEXT NOT NULL,
+        operador_username TEXT NOT NULL,
+        dispositivo TEXT NOT NULL DEFAULT 'Android',
+        endereco_ip TEXT NOT NULL DEFAULT '',
+        acao TEXT NOT NULL,
+        detalhes TEXT NOT NULL DEFAULT '',
+        sucesso INTEGER NOT NULL DEFAULT 1,
+        data_hora TEXT NOT NULL
+      );
+      CREATE INDEX IF NOT EXISTS idx_auditoria_usuario_data ON auditoria(usuario_id, data_hora DESC);
+      CREATE INDEX IF NOT EXISTS idx_auditoria_acao_data ON auditoria(acao, data_hora DESC);
     `);
     const productColumns = this.rows("PRAGMA table_info(produtos)");
     if (!productColumns.some(col => col.name === "estoque_minimo")) {
