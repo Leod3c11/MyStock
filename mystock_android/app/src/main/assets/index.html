@@ -153,6 +153,7 @@
       margin: auto; border-radius: 16px; background: #fff; color: #0f172a;
     }
 
+    .task-modal{display:none;position:fixed;inset:0;z-index:200000;background:rgba(15,23,42,.72);padding:18px;align-items:center;justify-content:center}.task-modal.open{display:flex}.task-modal-card{width:100%;max-width:440px;padding:22px;border-radius:16px;background:#fff;color:#0f172a;box-shadow:0 20px 60px rgba(0,0,0,.35)}.task-modal-card p{white-space:pre-line;line-height:1.5;font-size:14px}.task-modal-actions{display:flex;gap:10px}.task-modal-actions button{flex:1}.task-modal-actions .secondary{background:#475569}
     #loginOverlay { position:fixed; inset:0; z-index:100000; display:flex; align-items:center; justify-content:center; padding:22px; background:rgba(15,23,42,.92); }
     #loginOverlay .login-card { width:100%; max-width:420px; background:#fff; border-radius:18px; padding:24px; box-shadow:0 20px 60px rgba(0,0,0,.3); }
     #loginOverlay h2 { font-size:22px; margin:0 0 6px; color:#0f172a; }
@@ -395,6 +396,7 @@
     <section><h2>Tarefas pendentes</h2><p>Confira o produto, lote, origem, destino e quantidade antes de executar.</p><button id="atualizarTarefasMovimentacao">Atualizar tarefas</button><div id="tarefasMovimentacaoResultado"></div></section>
   </div>
 
+  <div id="taskModal" class="task-modal" role="dialog" aria-modal="true"><div class="task-modal-card"><h2 id="taskModalTitle">Confirmar tarefa</h2><p id="taskModalText"></p><div id="taskModalError" class="msg err" style="display:none"></div><div class="task-modal-actions"><button id="taskModalCancel" class="secondary" type="button">Cancelar</button><button id="taskModalConfirm" type="button">Confirmar</button></div></div></div>
   <div id="screen-movimentacoes" class="screen">
     <div class="screen-title"><button class="back-btn" data-screen="menu">Voltar</button><h2>Movimentações</h2></div>
     <section><h2>Histórico Operacional</h2><label>Número do produto</label><input id="movNumero" inputmode="numeric" placeholder="Opcional"><button id="consultarMovimentacoes">Consultar movimentações</button><div id="movResultado"></div></section>
@@ -641,37 +643,43 @@ function salvarEnderecoDetalhe(){ if(!enderecoDetalheAtual)return; clearMsg($("e
 function consultarEstoque(){ try{ const data=call("consultarEstoque",$("estNumero").value.trim()); renderItems($("estoqueResultado"),data.itens,item=>`<div class="item"><div class="line"><b>${esc(item.numero)} - ${esc(item.nome)}</b></div>${item.codigo_barras?`<div class="line"><b>QR / código:</b> ${esc(item.codigo_barras)}</div>`:""}<div class="line"><b>Lote:</b> ${esc(item.lote)}</div><div class="line"><b>Endereço:</b> ${esc(item.endereco)}</div><span class="strong">Saldo: ${esc(item.quantidade)} unidade(s)</span><div class="line" style="margin-top:6px;"><b>QC:</b> ${esc(item.unidades_por_caixa)} unidade(s) por caixa</div><div class="line"><b>Fabricação:</b> ${esc(item.fabricacao)}</div><div class="line"><b>Vencimento:</b> ${esc(item.vencimento)}</div></div>`); }catch(e){ $("estoqueResultado").innerHTML=`<div class="msg err">${esc(e.message)}</div>`; } }
 function buscarOrientacao(){ $("confirmBox").style.display="none"; try{if(!currentOrderId||!currentOrderItemId)throw Error("Valide uma ordem e selecione um item pendente antes de continuar.");currentPreview=call("previewSeparacao",{numero:$("produto").value.trim(),quantidade:parseInt($("quantidade").value,10)});if(String(currentPreview.produto)!==String($("produto").value)||Number(currentPreview.quantidade_pedida)!==Number($("quantidade").value))throw Error("Produto ou quantidade não corresponde ao item selecionado na ordem.");$("resultado").innerHTML=`<div class="item"><b>Produto:</b> ${esc(currentPreview.produto)} - ${esc(currentPreview.nome)}<br><b>Solicitado:</b> ${esc(currentPreview.quantidade_pedida)} unidade(s)</div>`; $("confirmItens").innerHTML=currentPreview.orientacoes.map((item,idx)=>`<div class="item"><b>Item ${idx+1}</b><div class="line"><b>Lote:</b> ${esc(item.lote)}</div><div class="line"><b>Endereço:</b> ${esc(item.endereco)}</div><span class="strong">Separar: ${esc(item.qtd_operador)} ${esc(item.unidade_operador)}</span><label>Digite a quantidade de ${esc(item.unidade_operador)} que você pegou</label><input class="confirmInput" inputmode="numeric" data-index="${idx}"></div>`).join(""); $("confirmBox").style.display="block"; $("confirmar").disabled=false; }catch(e){ $("resultado").innerHTML=`<div class="msg err">${esc(e.message)}</div>`; } }
 function confirmarSeparacao(){ if(!currentPreview||!currentOrderId||!currentOrderItemId)return; try{ const confirmacoes=[...document.querySelectorAll(".confirmInput")].map(i=>({index:parseInt(i.dataset.index,10),quantidade_confirmada:parseInt(i.value,10)})); const data=call("confirmarSeparacao",{token:currentPreview.token,confirmacoes,pedido_id:currentOrderId,pedido_item_id:currentOrderItemId}); showMsg($("confirmMsg"),data.message,true); $("confirmar").disabled=true; currentOrderItemId=0;currentPreview=null;$("separacaoProdutoBox").style.display="none";$("confirmBox").style.display="none";$("ordemListaSection").style.display="block";$("resultado").innerHTML="";carregarOrdemAtual(); }catch(e){ showMsg($("confirmMsg"),e.message,false); } }
+let tarefaMovPendente=null;
+function fecharModalTarefa(){ $("taskModal").classList.remove("open"); tarefaMovPendente=null; $("taskModalError").style.display="none"; $("taskModalConfirm").style.display=""; $("taskModalCancel").textContent="Cancelar"; }
 function carregarTarefasMovimentacao(){
   try{
-    const data=call("listarTarefasMovimentacao","PENDENTE");
-    const itens=data.itens||[];
+    const data=call("listarTarefasMovimentacao","PENDENTE"), itens=data.itens||[];
     renderItems($("tarefasMovimentacaoResultado"),itens,t=>`<div class="item">
       <div class="line"><b>Tarefa #${esc(t.id)} — ${esc(t.status)}</b></div>
       <div class="line"><b>Produto:</b> ${esc(t.produto_numero)} — ${esc(t.produto_nome)}</div>
-      <div class="line"><b>Lote:</b> ${esc(t.lote)}</div>
-      <div class="line"><b>Origem:</b> ${esc(t.origem)}</div>
-      <div class="line"><b>Destino:</b> ${esc(t.destino)}</div>
-      <div class="line"><b>Quantidade solicitada:</b> ${esc(t.quantidade)} unidade(s)</div>
+      <div class="line"><b>Lote:</b> ${esc(t.lote)}</div><div class="line"><b>Origem:</b> ${esc(t.origem)}</div>
+      <div class="line"><b>Destino:</b> ${esc(t.destino)}</div><div class="line"><b>Quantidade solicitada:</b> ${esc(t.quantidade)} unidade(s)</div>
       <div class="line"><b>Solicitada por:</b> ${esc(t.solicitado_por)} · ${esc(t.criado_em)}</div>
       <label for="tarefaQtd${esc(t.id)}">Quantidade efetivamente movimentada</label>
       <input id="tarefaQtd${esc(t.id)}" type="number" min="1" step="1" value="${esc(t.quantidade)}" inputmode="numeric">
-      <button class="executar-tarefa-mov" data-id="${esc(t.id)}">Confirmar e concluir tarefa</button>
-    </div>`,"Não há tarefas de movimentação pendentes.");
+      <button class="executar-tarefa-mov" data-id="${esc(t.id)}">Confirmar e concluir tarefa</button></div>`,"Não há tarefas de movimentação pendentes.");
     document.querySelectorAll(".executar-tarefa-mov").forEach(btn=>btn.onclick=()=>{
-      const id=Number(btn.dataset.id), input=$("tarefaQtd"+id), quantidade=Number(input.value);
-      if(!Number.isInteger(quantidade)||quantidade<=0){alert("Informe uma quantidade inteira maior que zero.");return;}
-      const tarefa=itens.find(x=>Number(x.id)===id);
+      const id=Number(btn.dataset.id), quantidade=Number($("tarefaQtd"+id).value), tarefa=itens.find(x=>Number(x.id)===id);
+      if(!Number.isInteger(quantidade)||quantidade<=0){$("taskModalTitle").textContent="Quantidade inválida";$("taskModalText").textContent="Informe uma quantidade inteira maior que zero no campo da tarefa."; $("taskModalError").style.display="none";$("taskModalConfirm").style.display="none";$("taskModalCancel").textContent="Fechar";$("taskModal").classList.add("open");return;}
       if(!tarefa)return;
-      if(!confirm("Confirme a execução da tarefa #"+id+"\n"+tarefa.origem+" → "+tarefa.destino+"\nQuantidade: "+quantidade+" unidade(s)\n\nO saldo será atualizado agora. Continuar?"))return;
-      try{const r=call("executarTarefaMovimentacao",{id,quantidade_confirmada:quantidade});alert(r.message);carregarTarefasMovimentacao();if($("screen-estoque")?.classList.contains("active"))consultarEstoque();}catch(e){alert("Não foi possível concluir a tarefa: "+e.message);}
+      tarefaMovPendente={id,quantidade};
+      $("taskModalTitle").textContent="Concluir tarefa #"+id+"?";
+      $("taskModalText").textContent="Produto: "+tarefa.produto_numero+" — "+tarefa.produto_nome+"\nLote: "+tarefa.lote+"\nTransferência: "+tarefa.origem+" → "+tarefa.destino+"\nQuantidade: "+quantidade+" unidade(s)+"+"\n\nO saldo será atualizado ao confirmar.";
+      $("taskModalError").style.display="none";$("taskModalConfirm").style.display="";$("taskModalConfirm").disabled=false;$("taskModalCancel").textContent="Cancelar";$("taskModal").classList.add("open");
     });
   }catch(e){$("tarefasMovimentacaoResultado").innerHTML='<div class="msg err">'+esc(e.message)+'</div>';}
 }
-
 function consultarMovimentacoes(){ try{ const data=call("listarMovimentacoes",$("movNumero").value.trim()); renderItems($("movResultado"),data.itens,item=>`<div class="item"><span class="badge">${esc(item.tipo)}</span><div class="line"><b>${esc(item.produto_numero)} - ${esc(item.produto_nome)}</b></div><div class="line"><b>Lote:</b> ${esc(item.lote)}</div><div class="line"><b>Endereço:</b> ${esc(item.endereco)}</div><div class="line"><b>Quantidade:</b> ${esc(item.quantidade)}</div><div class="line"><b>Saldo após:</b> ${esc(item.saldo_apos)}</div><div class="line"><b>Data/hora:</b> ${esc(item.data_hora)}</div></div>`); }catch(e){ $("movResultado").innerHTML=`<div class="msg err">${esc(e.message)}</div>`; } }
 
 document.querySelectorAll("[data-screen]").forEach(b=>b.onclick=()=>showScreen(b.dataset.screen));
 $("salvarCadastro").onclick=salvarCadastro; $("consultarProdutos").onclick=consultarProdutos; $("salvarEntrada").onclick=salvarEntrada; $("abrirLotesEntrada").onclick=abrirLotesEntrada; $("salvarEndereco").onclick=salvarEndereco; $("salvarEnderecoDetalhe").onclick=salvarEnderecoDetalhe; $("consultarEnderecos").onclick=()=>consultarEnderecos(false); $("verEnderecosEntrada").onclick=()=>consultarEnderecos(true); $("consultarEstoque").onclick=consultarEstoque; $("buscar").onclick=buscarOrientacao; $("confirmar").onclick=confirmarSeparacao; $("cancelar").onclick=()=>{currentOrderItemId=0;currentPreview=null;$("confirmBox").style.display="none";$("ordemListaSection").style.display="block";$("resultado").innerHTML="";}; $("consultarMovimentacoes").onclick=consultarMovimentacoes; $("atualizarTarefasMovimentacao").onclick=carregarTarefasMovimentacao;
+$("taskModalCancel").onclick=fecharModalTarefa;
+$("taskModal").onclick=e=>{if(e.target===$("taskModal"))fecharModalTarefa();};
+$("taskModalConfirm").onclick=()=>{
+ if(!tarefaMovPendente)return;
+ const t=tarefaMovPendente;$("taskModalConfirm").disabled=true;
+ try{const r=call("executarTarefaMovimentacao",{id:t.id,quantidade_confirmada:t.quantidade});$("taskModalTitle").textContent="Tarefa concluída";$("taskModalText").textContent=r.message||"Movimentação concluída com sucesso.";$("taskModalError").style.display="none";$("taskModalConfirm").style.display="none";$("taskModalCancel").textContent="Fechar";tarefaMovPendente=null;carregarTarefasMovimentacao();}
+ catch(e){$("taskModalError").textContent="Não foi possível concluir a tarefa: "+(e.message||"Erro inesperado.");$("taskModalError").style.display="block";$("taskModalConfirm").disabled=false;}
+};
 $("abrirEnderecosCadastro").onclick=abrirEnderecosCadastro; $("fecharEnderecosCadastro").onclick=()=>$("cadEnderecosPopup").classList.remove("open"); $("fecharLotesEntrada").onclick=()=>$("lotesEntradaPopup").classList.remove("open"); $("fecharEnderecosPopup").onclick=()=>$("enderecosPopup").classList.remove("open"); $("fecharEnderecosEntradaPopup").onclick=()=>$("enderecosEntrada").classList.remove("open");
 ["cadEnderecosPopup","lotesEntradaPopup","enderecosPopup","enderecosEntrada"].forEach(id=>$(id).onclick=e=>{ if(e.target.id===id)$(id).classList.remove("open"); });
 attachDateMask("cadFabricacao"); attachDateMask("cadVencimento");
