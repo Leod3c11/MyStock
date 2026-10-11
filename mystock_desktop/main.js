@@ -1,12 +1,15 @@
 const { app, BrowserWindow, ipcMain, dialog, session } = require("electron");
 const path = require("node:path");
 const http = require("node:http");
+const dgram = require("node:dgram");
 const os = require("node:os");
 const crypto = require("node:crypto");
 
 const LAN_PORT = 8765;
+const DISCOVERY_PORT = 8766;
 const lanSessions = new Map();
 let lanServer = null;
+let discoverySocket = null;
 
 function startLanServer(db) {
   const methods = {
@@ -94,6 +97,31 @@ function startLanServer(db) {
   });
   server.listen(LAN_PORT, "0.0.0.0");
   lanServer = server;
+
+  // Descoberta local por UDP: o Android pergunta na rede e o PC responde com os IPs disponíveis.
+  try {
+    discoverySocket = dgram.createSocket({ type: "udp4", reuseAddr: true });
+    discoverySocket.on("message", (message, remote) => {
+      if (message.toString("utf8").trim() !== "MYSTOCK_DISCOVER_V1") return;
+      const reply = Buffer.from(JSON.stringify({
+        service: "MyStock",
+        port: LAN_PORT,
+        ips: getLanIPv4Addresses()
+      }), "utf8");
+      discoverySocket.send(reply, remote.port, remote.address, () => {});
+    });
+    discoverySocket.on("error", error => {
+      if (error && error.code !== "EADDRINUSE") {
+        try { discoverySocket.close(); } catch {}
+        discoverySocket = null;
+      }
+    });
+    discoverySocket.bind(DISCOVERY_PORT, "0.0.0.0", () => {
+      try { discoverySocket.setBroadcast(true); } catch {}
+    });
+  } catch {
+    discoverySocket = null;
+  }
   return server;
 }
 
@@ -147,6 +175,10 @@ function serializeResult(fn) {
 }
 
 app.whenReady().then(() => {
+  // No instalador do Windows, iniciar o MyStock junto com a sessão do usuário.
+  if (app.isPackaged) {
+    try { app.setLoginItemSettings({ openAtLogin: true, openAsHidden: false }); } catch {}
+  }
   session.defaultSession.setPermissionRequestHandler((webContents, permission, callback) => {
     callback(permission === "media");
   });
@@ -200,6 +232,7 @@ app.whenReady().then(() => {
 });
 
 app.on("before-quit", () => {
+  if (discoverySocket) { try { discoverySocket.close(); } catch {} discoverySocket = null; }
   if (lanServer) lanServer.close();
   if (database) database.close();
 });
