@@ -160,6 +160,42 @@
       width: 100%; max-width: 520px; max-height: 85vh; overflow-y: auto; padding: 20px; 
       margin: auto; border-radius: 16px; background: #fff; color: #0f172a;
     }
+    /* Windows desktop workspace: persistent left navigation, independent from Android layout. */
+    #desktopSidebar { display:none; }
+    body.desktop-mode { --bg:#f1f5f9; }
+    .desktop-mode #desktopSidebar {
+      display:block; position:fixed; z-index:9; left:0; top:66px; bottom:0; width:260px;
+      overflow-y:auto; padding:18px 12px 28px; background:#0f172a; color:#e2e8f0;
+      border-right:1px solid #1e293b;
+    }
+    .desktop-mode .sidebar-heading { padding:0 12px 12px; font-size:11px; font-weight:800; letter-spacing:.12em; color:#94a3b8; text-transform:uppercase; }
+    .desktop-mode #desktopSidebar .process-group { margin:0 0 16px; }
+    .desktop-mode #desktopSidebar .process-title { color:#94a3b8; padding:0 12px; font-size:10px; margin-bottom:7px; }
+    .desktop-mode #desktopSidebar .menu-grid { gap:4px; }
+    .desktop-mode #desktopSidebar .menu-card {
+      padding:10px 11px; gap:10px; border:1px solid transparent; border-radius:9px;
+      background:transparent; color:#e2e8f0; box-shadow:none; min-height:46px;
+    }
+    .desktop-mode #desktopSidebar .menu-card:hover { transform:none; background:#1e293b; border-color:#334155; }
+    .desktop-mode #desktopSidebar .card-icon { width:30px; height:30px; border-radius:8px; }
+    .desktop-mode #desktopSidebar .menu-card strong { color:#f8fafc; font-size:12px; }
+    .desktop-mode #desktopSidebar .menu-card span { color:#94a3b8; font-size:10px; }
+    .desktop-mode #desktopSidebar .menu-card .badge { display:none; }
+    .desktop-mode main { max-width:none; width:auto; margin:0 0 0 260px; padding:26px 30px; }
+    .desktop-mode .kpi-grid { grid-template-columns:repeat(4,minmax(0,1fr)); gap:14px; }
+    .desktop-mode .kpi-card { padding:18px; }
+    .desktop-mode .kpi-value { font-size:25px; }
+    .desktop-mode .kpi-card.kpi-warning { border-color:#fca5a5; background:#fff7f7; }
+    .desktop-mode .kpi-card.kpi-warning .kpi-value { color:#b91c1c; }
+    .desktop-mode #estoqueMinimoAlertas { display:grid; grid-template-columns:repeat(auto-fit,minmax(240px,1fr)); gap:10px; margin:0 0 22px; }
+    .desktop-mode .stock-alert-item { margin:0; border-color:#fecaca; background:#fff7f7; }
+    .desktop-mode .screen:not(#screen-menu) { max-width:1500px; }
+    .desktop-mode .screen-title { position:sticky; top:72px; z-index:5; padding:10px 0; background:var(--bg); }
+    @media(max-width:1050px) {
+      .desktop-mode #desktopSidebar { width:220px; }
+      .desktop-mode main { margin-left:220px; padding:20px; }
+      .desktop-mode .kpi-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }
+    }
   </style>
 </head>
 <body>
@@ -185,6 +221,8 @@
   <div class="user-actions"><div class="user-badge"><span id="userNameBadge">Não autenticado</span><div id="userAvatar" class="avatar">MS</div></div><button id="logoutButton" class="secondary" style="display:none">Sair</button></div>
 </header>
 
+<aside id="desktopSidebar"><div class="sidebar-heading">Navegação</div></aside>
+
 <main>
   <!-- DASHBOARD COM KPIS REAIS -->
   <div id="screen-menu" class="screen active">
@@ -203,9 +241,15 @@
       <div class="kpi-card">
         <span class="kpi-label">Movs. Registro</span>
         <span class="kpi-value" id="kpiMovs">0</span>
-        <span class="kpi-sub">Total histórico</span>
+        <span class="kpi-sub">Últimos registros</span>
+      </div>
+      <div class="kpi-card" id="kpiEstoqueMinimoCard">
+        <span class="kpi-label">Alerta de estoque mínimo</span>
+        <span class="kpi-value" id="kpiEstoqueMinimo">0</span>
+        <span class="kpi-sub" id="kpiEstoqueMinimoSub">Produtos em atenção</span>
       </div>
     </div>
+    <div id="estoqueMinimoAlertas" aria-live="polite"></div>
 
     <div class="dashboard-controls">
       <div class="search-bar">
@@ -314,6 +358,7 @@
       <label>Nome do produto</label><input id="cadNome" placeholder="Ex.: Fluconid">
       <label>Lote</label><input id="cadLote" inputmode="numeric" placeholder="Ex.: 30010281">
       <label>Unidades por caixa</label><input id="cadQc" inputmode="numeric" placeholder="Ex.: 60">
+      <label>Estoque mínimo para alerta</label><input id="cadEstoqueMinimo" type="number" min="0" step="1" inputmode="numeric" value="0" placeholder="0 = sem alerta">
       <label>Data de fabricação</label><input id="cadFabricacao" placeholder="DD/MM/AAAA">
       <label>Data de vencimento</label><input id="cadVencimento" placeholder="DD/MM/AAAA">
       <label>Quantidade inicial para endereçar</label><input id="cadQuantidadeEntrada" inputmode="numeric" placeholder="Opcional">
@@ -326,7 +371,7 @@
 
   <div id="screen-produtos" class="screen">
     <div class="screen-title"><button class="back-btn" data-screen="menu">Voltar</button><h2>Produtos cadastrados</h2></div>
-    <section><h2>Catálogo de Produtos</h2><label>Número, código de barras ou nome</label><input id="prodFiltro" placeholder="Opcional"><button id="consultarProdutos">Consultar produtos</button><div id="produtosResultado"></div></section><section id="editarProdutoBox" style="display:none"><h2>Editar cadastro</h2><input id="editProdutoId" type="hidden"><input id="editLoteId" type="hidden"><label>Número do produto</label><input id="editNumero"><label>QR Code / código de barras</label><input id="editCodigo"><label>Nome do produto</label><input id="editNome"><label>Lote</label><input id="editLote"><label>Unidades por caixa (QC)</label><input id="editQc" inputmode="numeric"><label>Fabricação</label><input id="editFabricacao" placeholder="DD/MM/AAAA"><label>Vencimento</label><input id="editVencimento" placeholder="DD/MM/AAAA"><button id="salvarEdicaoProduto">Salvar correções</button><button id="cancelarEdicaoProduto" class="secondary">Cancelar</button><div id="editProdutoMsg" class="msg"></div></section>
+    <section><h2>Catálogo de Produtos</h2><label>Número, código de barras ou nome</label><input id="prodFiltro" placeholder="Opcional"><button id="consultarProdutos">Consultar produtos</button><div id="produtosResultado"></div></section><section id="editarProdutoBox" style="display:none"><h2>Editar cadastro</h2><input id="editProdutoId" type="hidden"><input id="editLoteId" type="hidden"><label>Número do produto</label><input id="editNumero"><label>QR Code / código de barras</label><input id="editCodigo"><label>Nome do produto</label><input id="editNome"><label>Lote</label><input id="editLote"><label>Unidades por caixa (QC)</label><input id="editQc" inputmode="numeric"><label>Estoque mínimo para alerta</label><input id="editEstoqueMinimo" type="number" min="0" step="1" inputmode="numeric"><label>Fabricação</label><input id="editFabricacao" placeholder="DD/MM/AAAA"><label>Vencimento</label><input id="editVencimento" placeholder="DD/MM/AAAA"><button id="salvarEdicaoProduto">Salvar correções</button><button id="cancelarEdicaoProduto" class="secondary">Cancelar</button><div id="editProdutoMsg" class="msg"></div></section>
   </div>
 
   <div id="screen-entrada" class="screen">
