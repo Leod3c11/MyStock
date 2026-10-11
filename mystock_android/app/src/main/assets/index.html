@@ -41,6 +41,9 @@
     }
     header h1 { font-size: 18px; font-weight: 800; margin: 0; color: var(--text); letter-spacing: -0.02em; }
     .user-badge { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--muted); font-weight: 600; }
+    .connection-dot { width: 11px; height: 11px; border-radius: 50%; display: inline-block; flex: 0 0 11px; background: #dc2626; box-shadow: 0 0 0 3px rgba(220,38,38,.12); }
+    .connection-dot.connected { background: #16a34a; box-shadow: 0 0 0 3px rgba(22,163,74,.14); }
+    #serverAddress, #discoverServerButton, label[for="serverAddress"] { display: none !important; }
     .avatar { width: 28px; height: 28px; border-radius: 50%; background: #e2e8f0; display: flex; align-items: center; justify-content: center; color: var(--muted); font-weight: 700; font-size: 11px; }
 
     main { padding: 16px; max-width: 760px; margin: 0 auto; }
@@ -187,6 +190,7 @@
     <h1>MyStock WMS</h1>
   </div>
   <div class="user-badge">
+    <span id="connectionStatusDot" class="connection-dot" role="img" aria-label="Sem conexão" title="Sem conexão com o computador"></span>
     <span id="androidUserName">Não conectado</span>
     <button id="logoutAndroid" class="secondary" type="button">Sair</button>
     <div class="avatar" id="androidAvatar">MS</div>
@@ -427,6 +431,7 @@ function entrarAndroid() {
     $("androidUserName").textContent=result.user.nome+" ("+result.user.username+")";
     $("androidAvatar").textContent=String(result.user.nome||"MS").trim().split(/\s+/).slice(0,2).map(x=>x[0]).join("").toUpperCase();
     aplicarPermissoesAndroid(result.user);
+    atualizarIndicadorConexao(true);
     atualizarDashboardKPIs();
     $("loginPassword").value="";
   } catch(e) { mensagemLogin(e.message||"Falha ao entrar."); }
@@ -435,6 +440,7 @@ function entrarAndroid() {
 function sairAndroid() {
   try { window.MyStock.logoutRemoto(); } catch(e) {}
   androidAutenticado=false; androidUsuario=null;
+  atualizarIndicadorConexao(false);
   $("loginOverlay").style.display="flex";
   $("androidUserName").textContent="Não conectado";
   $("loginPassword").value="";
@@ -651,6 +657,33 @@ function descobrirServidorAndroid(exibirMensagem=true) {
   }
 }
 
+function atualizarIndicadorConexao(conectado) {
+  const dot=$("connectionStatusDot");
+  if(!dot)return;
+  dot.classList.toggle("connected",!!conectado);
+  dot.title=conectado?"Conectado ao MyStock no computador":"Sem conexão com o computador";
+  dot.setAttribute("aria-label",dot.title);
+}
+
+let monitorConexaoMyStock=null;
+function monitorarConexaoMyStock() {
+  if(monitorConexaoMyStock)return;
+  const verificar=()=>{
+    try {
+      const status=JSON.parse(window.MyStock.heartbeatRemoto());
+      atualizarIndicadorConexao(status.connected===true);
+      if(status.authenticated===false && androidAutenticado) {
+        androidAutenticado=false; androidUsuario=null;
+        $("loginOverlay").style.display="flex";
+        mensagemLogin("A sessão expirou ou foi encerrada. Entre novamente.",false);
+        $("androidUserName").textContent="Não conectado";
+      }
+    } catch(e) { atualizarIndicadorConexao(false); }
+  };
+  verificar();
+  monitorConexaoMyStock=setInterval(verificar,5000);
+}
+
 window.addEventListener("DOMContentLoaded", () => {
   try {
     const saved=JSON.parse(window.MyStock.servidorSalvo());
@@ -661,8 +694,16 @@ window.addEventListener("DOMContentLoaded", () => {
   $("loginPassword").addEventListener("keydown",e=>{if(e.key==="Enter")entrarAndroid();});
   $("loginUsername").addEventListener("keydown",e=>{if(e.key==="Enter")entrarAndroid();});
   $("logoutAndroid").onclick=sairAndroid;
-  // Atualiza o endereço salvo se o PC recebeu um novo IP na rede.
-  descobrirServidorAndroid(false);
+  // Procura o computador em segundo plano; o endereço não é mostrado ao operador.
+  try { window.MyStock.iniciarDescobertaServidor(); } catch(e) {}
+  const discoveryPoll=setInterval(()=>{
+    try {
+      const status=JSON.parse(window.MyStock.statusServidorDescoberto());
+      if(status.serverUrl) $("serverAddress").value=status.serverUrl;
+      if(status.found || !status.searching) clearInterval(discoveryPoll);
+    } catch(e) { clearInterval(discoveryPoll); }
+  },1000);
+  monitorarConexaoMyStock();
 });
 </script>
 </body>
