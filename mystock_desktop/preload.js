@@ -8,6 +8,7 @@ const methods = [
   "listarEnderecos",
   "registrarEntrada",
   "consultarEstoque",
+  "moverEstoque",
   "listarLotes",
   "listarProdutos",
   "listarEstoqueMinimo",
