@@ -327,6 +327,10 @@ public class MyStockBridge {
     }
 
     @JavascriptInterface public String salvarProduto(String json) { return call("salvarProduto", json); }
+    @JavascriptInterface public String editarProduto(String json) { return call("editarProduto", json); }
+    @JavascriptInterface public String criarPedido(String json) { return call("criarPedido", json); }
+    @JavascriptInterface public String listarPedidos(String filtro) { return call("listarPedidos", filtro); }
+    @JavascriptInterface public String obterPedido(String json) { return call("obterPedido", json); }
     @JavascriptInterface public String salvarEndereco(String json) { return call("salvarEndereco", json); }
     @JavascriptInterface public String listarEnderecos(String apenasDisponiveis) { return call("listarEnderecos", apenasDisponiveis); }
     @JavascriptInterface public String registrarEntrada(String json) { return call("registrarEntrada", json); }
