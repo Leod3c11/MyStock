@@ -635,7 +635,7 @@ function loadLanSessions(){
       return `<div class="item">
         <div style="display:flex;align-items:center;gap:9px;flex-wrap:wrap">
           <span style="width:10px;height:10px;border-radius:50%;background:${stateColor};display:inline-block;flex-shrink:0"></span>
-          <b>${esc(item.nome)}</b><span class="badge">${item.role==="admin"?"Administrador":"Operador"}</span>
+          <b>${esc(item.nome)}</b><span class="badge">${item.role==="admin"?"Administrador":"Operador"}</span><span class="badge">${esc(item.device||"Android")}</span>
           <span style="margin-left:auto;font-size:12px;font-weight:700;color:${stateColor}">${connectionText}</span>
         </div>
         <div class="line">Usuário: ${esc(item.username)} · IP: ${esc(item.ip||"desconhecido")}</div>
