@@ -506,7 +506,9 @@ class MyStockDatabase {
     if(!from||Number(from.quantidade)<quantidade) this.fail("O endereço de origem não possui saldo suficiente para a tarefa.");
     const to=this.db.prepare("SELECT en.id,en.capacidade_maxima,COALESCE((SELECT SUM(e.quantidade) FROM estoque e WHERE e.endereco_id=en.id),0) AS ocupado FROM enderecos en WHERE UPPER(en.codigo)=?").get(destino);
     if(!to) this.fail("Endereço de destino não cadastrado.");
-    if(quantidade>Number(to.capacidade_maxima)-Number(to.ocupado)) this.fail("O destino não possui capacidade suficiente para a tarefa.");
+    const free=Number(to.capacidade_maxima)-Number(to.ocupado);
+    const pendingDestination=this.db.prepare("SELECT COALESCE(SUM(quantidade),0) AS total FROM tarefas_movimentacao WHERE UPPER(destino)=? AND status='PENDENTE'").get(destino).total;
+    if(quantidade>free-Number(pendingDestination)) this.fail("O destino não tem espaço suficiente considerando outras tarefas pendentes. Espaço livre após reservas: "+Math.max(0,free-Number(pendingDestination))+" unidade(s).");
     const pending=this.db.prepare("SELECT COALESCE(SUM(quantidade),0) AS total FROM tarefas_movimentacao WHERE lote_id=? AND UPPER(origem)=? AND status='PENDENTE'").get(loteId,origem).total;
     if(Number(from.quantidade)-Number(pending)<quantidade) this.fail("Já existem tarefas pendentes que reservam parte desse saldo.");
     const info=this.db.prepare("SELECT p.numero,p.nome,l.lote FROM produtos p JOIN lotes l ON l.produto_id=p.id WHERE p.id=? AND l.id=?").get(produtoId,loteId);
