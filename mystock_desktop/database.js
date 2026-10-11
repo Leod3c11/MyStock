@@ -281,6 +281,18 @@ class MyStockDatabase {
         ativo INTEGER NOT NULL DEFAULT 1,
         criado_em TEXT NOT NULL
       );
+      CREATE TABLE IF NOT EXISTS clientes (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        nome TEXT NOT NULL COLLATE NOCASE,
+        documento TEXT NOT NULL DEFAULT '',
+        telefone TEXT NOT NULL DEFAULT '',
+        email TEXT NOT NULL DEFAULT '',
+        endereco TEXT NOT NULL DEFAULT '',
+        ativo INTEGER NOT NULL DEFAULT 1,
+        criado_em TEXT NOT NULL
+      );
+      CREATE UNIQUE INDEX IF NOT EXISTS idx_clientes_documento
+        ON clientes(documento) WHERE documento IS NOT NULL AND documento != '';
       CREATE TABLE IF NOT EXISTS pedidos (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         numero TEXT NOT NULL UNIQUE,
@@ -510,6 +522,38 @@ class MyStockDatabase {
       throw error;
     }
     return this.ok({message:"Produto e lote atualizados. O saldo de estoque foi preservado."});
+  }
+
+  saveClient(data) {
+    const id=Number(data.id)||0;
+    const nome=String(data.nome||"").trim();
+    const documento=String(data.documento||"").trim().replace(/[^0-9A-Za-z]/g,"");
+    const telefone=String(data.telefone||"").trim();
+    const email=String(data.email||"").trim();
+    const endereco=String(data.endereco||"").trim();
+    if(nome.length<2)this.fail("Informe o nome do cliente (mínimo de 2 caracteres).");
+    if(email&&!/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(email))this.fail("Informe um e-mail válido.");
+    try {
+      if(id){
+        const result=this.db.prepare("UPDATE clientes SET nome=?,documento=?,telefone=?,email=?,endereco=? WHERE id=? AND ativo=1").run(nome,documento,telefone,email,endereco,id);
+        if(!result.changes)this.fail("Cliente não encontrado ou inativo.");
+        return this.ok({message:"Cadastro do cliente atualizado.",id});
+      }
+      const result=this.db.prepare("INSERT INTO clientes(nome,documento,telefone,email,endereco,ativo,criado_em) VALUES(?,?,?,?,?,1,?)").run(nome,documento,telefone,email,endereco,this.now());
+      return this.ok({message:"Cliente cadastrado com sucesso.",id:Number(result.lastInsertRowid)});
+    } catch(error) {
+      if(String(error.message||"").includes("UNIQUE"))this.fail("Já existe um cliente cadastrado com esse CPF/CNPJ.");
+      throw error;
+    }
+  }
+
+  listClients(filtro) {
+    const value=String(filtro||"").trim();
+    let sql="SELECT id,nome,documento,telefone,email,endereco,ativo,criado_em FROM clientes WHERE ativo=1";
+    const params=[];
+    if(value){sql+=" AND (nome LIKE ? OR documento LIKE ? OR telefone LIKE ? OR email LIKE ?)";params.push("%"+value+"%","%"+value+"%","%"+value+"%","%"+value+"%");}
+    sql+=" ORDER BY nome COLLATE NOCASE LIMIT 500";
+    return this.ok({itens:this.rows(sql,params)});
   }
 
   createOrder(data) {
