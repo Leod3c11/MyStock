@@ -170,6 +170,37 @@
       .kpi-card { padding: 16px; }
       .kpi-value { font-size: 23px; }
     }
+
+    .pedido-intro{background:linear-gradient(135deg,#eff6ff,#f8fafc);border:1px solid #bfdbfe;border-radius:12px;padding:16px 18px;margin-bottom:16px}
+    .pedido-intro strong{display:block;font-size:16px;color:#1e40af}
+    .pedido-intro p,.pedido-etapa-titulo p{margin:4px 0 0;color:var(--muted);font-size:13px;line-height:1.45}
+    .pedido-etapa{padding:18px;margin-bottom:16px}
+    .pedido-etapa-titulo{display:flex;align-items:flex-start;gap:12px;margin-bottom:16px}
+    .pedido-etapa-titulo h2{margin:0;font-size:16px}
+    .pedido-numero{width:30px;height:30px;flex:0 0 30px;display:flex;align-items:center;justify-content:center;border-radius:50%;background:#dbeafe;color:#1d4ed8;font-weight:800}
+    .pedido-numero-neutro{background:#f1f5f9;color:#475569}
+    .pedido-ajuda{color:var(--muted);font-size:12px;margin:7px 0 12px}
+    .pedido-busca{display:flex;align-items:stretch;gap:8px}
+    .pedido-busca input{flex:1;min-width:0}
+    .pedido-busca button{flex:0 0 auto;margin-top:0}
+    .pedido-selecionado{border:1px solid #93c5fd;background:#eff6ff;border-radius:10px;padding:12px;margin-top:12px;line-height:1.5}
+    .pedido-quantidade{display:flex;align-items:flex-end;gap:12px;margin-top:12px}
+    .pedido-quantidade>div{flex:1;min-width:0}
+    .pedido-quantidade button{flex:0 0 auto;margin-top:0}
+    .pedido-resumo{display:grid;gap:8px}
+    .pedido-resumo .item{margin:0;background:#fff}
+    .pedido-vazio{padding:16px;border:1px dashed var(--border);border-radius:10px;color:var(--muted);font-size:13px;text-align:center}
+    .pedido-item-linha{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
+    .pedido-item-linha>div:first-child{min-width:0}
+    .pedido-item-qtd{color:var(--muted);font-size:13px;margin-top:4px}
+    .pedido-item-linha button{margin:0;width:auto}
+    .pedido-total{display:flex;justify-content:space-between;gap:12px;padding:14px 2px;margin-top:8px;border-top:1px solid var(--border);color:var(--muted);font-size:13px}
+    .pedido-total strong{color:var(--text)}
+    button.pedido-gerar{width:100%;margin-top:4px;padding:13px 16px;font-weight:800}
+    button.pedido-gerar:disabled{opacity:.45;cursor:not-allowed}
+    .pedido-lista-geradas{margin-top:22px}
+    @media(max-width:520px){.pedido-etapa{padding:14px}.pedido-busca{flex-direction:column}.pedido-busca button{width:100%}.pedido-quantidade{flex-direction:column;align-items:stretch}.pedido-quantidade button{width:100%}.pedido-item-linha{flex-direction:column}.pedido-item-linha button{width:100%}}
+
   </style>
 </head>
 <body>
@@ -415,7 +446,32 @@
     </section>
     <section><h2>Clientes cadastrados</h2><label for="clienteFiltro">Pesquisar por nome, documento, telefone ou e-mail</label><input id="clienteFiltro" placeholder="Digite para pesquisar"><button id="consultarClientes">Pesquisar clientes</button><div id="clientesResultado"></div></section>
   </div>
-  <div id="screen-pedidos" class="screen"><div class="screen-title"><button class="back-btn" data-screen="menu">Voltar</button><h2>Gerar ordem de remessa</h2></div><section><h2>Identificação da remessa</h2><label for="pedidoClienteSelect">Cliente cadastrado</label><select id="pedidoClienteSelect"><option value="">Selecione um cliente (opcional)</option></select><label for="pedidoReferencia">Referência da remessa (opcional)</label><input id="pedidoReferencia" placeholder="Ex.: cliente, filial ou observação"><div id="pedidoClienteResumo" class="msg"></div></section><section><h2>Adicionar produtos</h2><label for="pedidoProdutoBusca">Pesquisar produto por número, nome ou QR/código de barras</label><input id="pedidoProdutoBusca" autocomplete="off" placeholder="Digite o número, nome ou leia o código"><button id="pesquisarProdutosPedido" class="secondary">Pesquisar produtos</button><div id="pedidoProdutosResultados"></div><div id="pedidoProdutoSelecionado" class="item" style="display:none"></div><label for="pedidoQuantidade">Quantidade solicitada (unidades)</label><input id="pedidoQuantidade" inputmode="numeric" placeholder="Quantidade"><button id="adicionarItemPedido">Adicionar produto à ordem</button><div id="pedidoItensRascunho"></div><button id="gerarPedido">Gerar número da ordem</button><div id="pedidoMsg" class="msg" role="status"></div></section><section><h2>Ordens geradas</h2><label for="pedidoFiltro">Pesquisar por número da ordem ou cliente</label><input id="pedidoFiltro" placeholder="Digite a ordem ou cliente"><button id="consultarPedidos">Atualizar ordens</button><div id="pedidosResultado"></div></section></div>
+  <div id="screen-pedidos" class="screen">
+    <div class="screen-title"><button class="back-btn" data-screen="menu">Voltar</button><h2>Gerar ordem de remessa</h2></div>
+    <div class="pedido-intro"><strong>Nova ordem de remessa</strong><p>Preencha os dados, adicione os produtos e confira a lista antes de gerar a ordem.</p></div>
+    <section class="pedido-etapa">
+      <div class="pedido-etapa-titulo"><span class="pedido-numero">1</span><div><h2>Identificação</h2><p>Informe o cliente e uma referência, se necessário.</p></div></div>
+      <label for="pedidoClienteSelect">Cliente</label><select id="pedidoClienteSelect"><option value="">Selecione um cliente (opcional)</option></select>
+      <div id="pedidoClienteResumo" class="pedido-ajuda"></div>
+      <label for="pedidoReferencia">Referência da remessa (opcional)</label><input id="pedidoReferencia" placeholder="Ex.: filial, número externo ou observação">
+    </section>
+    <section class="pedido-etapa">
+      <div class="pedido-etapa-titulo"><span class="pedido-numero">2</span><div><h2>Adicionar produtos</h2><p>Pesquise pelo número, nome, QR/código de barras ou lote.</p></div></div>
+      <div class="pedido-busca"><input id="pedidoProdutoBusca" autocomplete="off" placeholder="Digite ou leia o código do produto"><button id="pesquisarProdutosPedido" class="secondary">Pesquisar</button></div>
+      <div id="pedidoProdutosResultados"></div><div id="pedidoProdutoSelecionado" class="pedido-selecionado" style="display:none"></div>
+      <div class="pedido-quantidade"><div><label for="pedidoQuantidade">Quantidade solicitada</label><input id="pedidoQuantidade" inputmode="numeric" placeholder="Quantidade em unidades"></div><button id="adicionarItemPedido">Adicionar à lista</button></div>
+    </section>
+    <section class="pedido-etapa">
+      <div class="pedido-etapa-titulo"><span class="pedido-numero">3</span><div><h2>Conferir e gerar</h2><p>Revise os produtos e as quantidades antes de concluir.</p></div></div>
+      <div id="pedidoResumoRascunho" class="pedido-resumo"><div class="pedido-vazio">Nenhum produto adicionado. Pesquise e adicione os produtos acima.</div></div>
+      <div class="pedido-total"><span id="pedidoTotalItens">0 produtos</span><strong id="pedidoTotalUnidades">0 unidades</strong></div>
+      <button id="gerarPedido" class="pedido-gerar" disabled>Gerar ordem de remessa</button><div id="pedidoMsg" class="msg" role="status"></div>
+    </section>
+    <section class="pedido-etapa pedido-lista-geradas">
+      <div class="pedido-etapa-titulo"><span class="pedido-numero pedido-numero-neutro"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg></span><div><h2>Ordens geradas</h2><p>Consulte ordens já registradas.</p></div></div>
+      <div class="pedido-busca"><input id="pedidoFiltro" placeholder="Pesquisar por número da ordem ou cliente"><button id="consultarPedidos" class="secondary">Pesquisar</button></div><div id="pedidosResultado"></div>
+    </section>
+  </div>
   <div id="screen-separacao" class="screen">
     <div class="screen-title"><button class="back-btn" data-screen="menu">Voltar</button><h2>Separação</h2></div>
     <section id="separacaoOrdemGate">
@@ -905,9 +961,16 @@ function carregarClientesPedido(){try{const d=call("listarClientes",""),sel=$("p
 function carregarProdutosPedido(){produtoPedidoSelecionado=null;$("pedidoProdutoSelecionado").style.display="none";$("pedidoProdutoBusca").value="";$("pedidoProdutosResultados").innerHTML="";$("pedidoQuantidade").value="";carregarClientesPedido();}
 function pesquisarProdutosPedido(){const filtro=$("pedidoProdutoBusca").value.trim();if(!filtro){$("pedidoProdutosResultados").innerHTML='<div class="msg">Digite um número, nome ou código para pesquisar.</div>';return;}try{const d=call("listarProdutos",filtro),seen=new Set(),list=[];for(const p of d.itens){if(seen.has(p.produto_id))continue;seen.add(p.produto_id);list.push(p);}renderItems($("pedidoProdutosResultados"),list,p=>'<div class="item"><div class="line"><b>'+esc(p.numero)+' — '+esc(p.nome)+'</b></div>'+(p.codigo_barras?'<div class="line">QR / código: '+esc(p.codigo_barras)+'</div>':'')+'<div class="line">Lotes cadastrados: '+esc(d.itens.filter(x=>x.produto_id===p.produto_id).length)+'</div><div class="line">Saldo total: '+esc(p.saldo_produto??p.saldo_total)+' unidade(s)</div><button class="secondary selecionar-produto-pedido" data-id="'+p.produto_id+'">Selecionar produto</button></div>',"Nenhum produto corresponde à pesquisa.");document.querySelectorAll(".selecionar-produto-pedido").forEach(b=>b.onclick=()=>selecionarProdutoPedido(Number(b.dataset.id),list));}catch(e){$("pedidoProdutosResultados").innerHTML='<div class="msg err">'+esc(e.message)+'</div>';}}
 function selecionarProdutoPedido(id,list){const p=list.find(x=>Number(x.produto_id)===id);if(!p)return;produtoPedidoSelecionado={produto_id:id,numero:p.numero,nome:p.nome,codigo_barras:p.codigo_barras||"",saldo:Number(p.saldo_produto??p.saldo_total)||0};$("pedidoProdutoSelecionado").style.display="block";$("pedidoProdutoSelecionado").innerHTML='<b>Produto selecionado:</b> '+esc(p.numero)+' — '+esc(p.nome)+(p.codigo_barras?'<div class="line">QR / código: '+esc(p.codigo_barras)+'</div>':'')+'<div class="line">Saldo disponível: '+produtoPedidoSelecionado.saldo+' unidade(s)</div>';showMsg($("pedidoMsg"),"Produto selecionado.",true);}
-function renderItensPedido(){renderItems($("pedidoItensRascunho"),itensPedidoRascunho,(x,i)=>'<div class="item"><b>'+esc(x.descricao)+'</b><div>Quantidade: '+x.quantidade+' unidade(s)</div><button class="danger" onclick="removerItemPedido('+i+')">Remover</button></div>',"Nenhum produto adicionado à ordem.");}
-function adicionarItemPedido(){const p=produtoPedidoSelecionado,q=Number.parseInt($("pedidoQuantidade").value,10)||0;if(!p||q<=0){showMsg($("pedidoMsg"),"Pesquise e selecione um produto e informe uma quantidade válida.",false);return;}const found=itensPedidoRascunho.find(x=>x.produto_id===p.produto_id);if(found)found.quantidade+=q;else itensPedidoRascunho.push({produto_id:p.produto_id,quantidade:q,descricao:p.numero+" — "+p.nome});renderItensPedido();$("pedidoQuantidade").value="";produtoPedidoSelecionado=null;$("pedidoProdutoSelecionado").style.display="none";$("pedidoProdutoBusca").value="";$("pedidoProdutosResultados").innerHTML="";showMsg($("pedidoMsg"),"Produto adicionado à ordem.",true);}
-function removerItemPedido(i){itensPedidoRascunho.splice(i,1);renderItensPedido();}
+function renderItensPedido(){
+  const root=$("pedidoResumoRascunho");
+  root.innerHTML=itensPedidoRascunho.length?itensPedidoRascunho.map((x,i)=>'<div class="item"><div class="pedido-item-linha"><div><b>'+esc(x.descricao)+'</b><div class="pedido-item-qtd">Quantidade: '+x.quantidade+' unidade(s)</div></div><button class="danger" onclick="removerItemPedido('+i+')">Remover</button></div></div>').join(""):'<div class="pedido-vazio">Nenhum produto adicionado. Pesquise e adicione os produtos acima.</div>';
+  const total=itensPedidoRascunho.reduce((s,x)=>s+x.quantidade,0);
+  $("pedidoTotalItens").textContent=itensPedidoRascunho.length+" produto(s)";
+  $("pedidoTotalUnidades").textContent=total+" unidade(s)";
+  $("gerarPedido").disabled=!itensPedidoRascunho.length;
+}
+function adicionarItemPedido(){const p=produtoPedidoSelecionado,q=Number.parseInt($("pedidoQuantidade").value,10)||0;if(!p||q<=0){showMsg($("pedidoMsg"),"Pesquise e selecione um produto e informe uma quantidade válida.",false);return;}if(q>p.saldo){showMsg($("pedidoMsg"),"A quantidade solicitada é maior que o saldo disponível ("+p.saldo+" unidade(s)).",false);return;}const found=itensPedidoRascunho.find(x=>x.produto_id===p.produto_id);if(found){if(found.quantidade+q>p.saldo){showMsg($("pedidoMsg"),"A soma das quantidades deste produto ultrapassa o saldo disponível ("+p.saldo+" unidade(s)).",false);return;}found.quantidade+=q;}else itensPedidoRascunho.push({produto_id:p.produto_id,quantidade:q,descricao:p.numero+" — "+p.nome,saldo:p.saldo});renderItensPedido();$("pedidoQuantidade").value="";produtoPedidoSelecionado=null;$("pedidoProdutoSelecionado").style.display="none";$("pedidoProdutoBusca").value="";$("pedidoProdutosResultados").innerHTML="";showMsg($("pedidoMsg"),"Produto adicionado à lista.",true);}
+function removerItemPedido(i){itensPedidoRascunho.splice(i,1);renderItensPedido();showMsg($("pedidoMsg"),"Produto removido da lista.",true);}(i){itensPedidoRascunho.splice(i,1);renderItensPedido();}
 function gerarPedido(){try{if(!itensPedidoRascunho.length)throw Error("Adicione pelo menos um produto à ordem.");const opt=$("pedidoClienteSelect").selectedOptions[0],clienteNome=opt&&opt.value?(opt.dataset.nome||opt.textContent):"";const referencia=$("pedidoReferencia").value.trim();const cliente=[clienteNome,referencia].filter(Boolean).join(" — ");const d=call("criarPedido",{cliente,criado_por:activeUser?.nome||"",itens:itensPedidoRascunho.map(x=>({produto_id:x.produto_id,quantidade:x.quantidade}))});showMsg($("pedidoMsg"),d.message,true);itensPedidoRascunho=[];renderItensPedido();$("pedidoReferencia").value="";$("pedidoClienteSelect").value="";consultarPedidos();}catch(e){showMsg($("pedidoMsg"),e.message,false);}}
 function consultarPedidos(){try{const d=call("listarPedidos",$("pedidoFiltro").value.trim());renderItems($("pedidosResultado"),d.itens,p=>'<div class="item"><b>Ordem: '+esc(p.numero)+'</b> <span class="badge">'+esc(p.status)+'</span><div>Cliente / referência: '+esc(p.cliente||"Não informado")+'</div><div>Itens: '+p.total_itens+' · Unidades: '+p.total_unidades+'</div><div>Criado em: '+esc(p.criado_em)+'</div><button class="secondary" onclick="verDetalhePedido(\''+esc(p.numero)+'\')">Ver itens</button></div>',"Nenhuma ordem criada.");}catch(e){$("pedidosResultado").innerHTML='<div class="msg err">'+esc(e.message)+'</div>';}}
 function verDetalhePedido(numero){try{const d=call("obterPedido",{numero});alert("Ordem "+d.pedido.numero+"\nCliente: "+d.pedido.cliente+"\n"+d.itens.map(i=>i.produto_numero+" - "+i.nome+" | "+i.quantidade+" un. | "+i.status).join("\n"));}catch(e){alert(e.message);}}
