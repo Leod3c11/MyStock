@@ -44,6 +44,8 @@ function loginSucceeded(key) {
 function startLanServer(db) {
   const methods = {
     salvarProduto: value => db.saveProduct(JSON.parse(value || "{}")),
+    salvarCliente: value => db.saveClient(JSON.parse(value || "{}")),
+    listarClientes: value => db.listClients(String(value || "")),
     editarProduto: value => db.editProduct(JSON.parse(value || "{}")),
     criarPedido: value => db.createOrder(JSON.parse(value || "{}")),
     listarPedidos: value => db.listOrders(String(value || "")),
@@ -62,7 +64,7 @@ function startLanServer(db) {
     confirmarSeparacao: value => db.confirmSeparation(JSON.parse(value || "{}"))
   };
   const permissionByMethod = {
-    salvarProduto:"cadastro", editarProduto:"cadastro", listarProdutos:"produtos", criarPedido:"separacao", listarPedidos:"separacao", obterPedido:"separacao", registrarEntrada:"entrada",
+    salvarProduto:"cadastro", editarProduto:"cadastro", listarProdutos:"produtos", salvarCliente:"separacao", listarClientes:"separacao", criarPedido:"separacao", listarPedidos:"separacao", obterPedido:"separacao", registrarEntrada:"entrada",
     listarLotes:"entrada", salvarEndereco:"enderecos", listarEnderecos:"enderecos", listarEstoqueMinimo:"produtos",
     consultarEstoque:"consulta_estoque", previewSeparacao:"separacao",
     confirmarSeparacao:"separacao", listarMovimentacoes:"movimentacoes"
@@ -332,6 +334,8 @@ app.whenReady().then(() => {
       salvarUsuario: value => database.saveUser(JSON.parse(value||"{}")),
       alternarUsuario: value => { const data=JSON.parse(value||"{}"); if(currentUser&&Number(data.id)===Number(currentUser.id))throw new Error("Não é permitido desativar a própria conta."); return database.toggleUser(data); },
       salvarProduto: value => database.saveProduct(JSON.parse(value || "{}")),
+      salvarCliente: value => database.saveClient(JSON.parse(value || "{}")),
+      listarClientes: value => database.listClients(String(value || "")),
       editarProduto: value => database.editProduct(JSON.parse(value || "{}")),
       criarPedido: value => database.createOrder(JSON.parse(value || "{}")),
       listarPedidos: value => database.listOrders(String(value || "")),
@@ -349,7 +353,7 @@ app.whenReady().then(() => {
       previewSeparacao: value => database.previewSeparation(JSON.parse(value || "{}")),
       confirmarSeparacao: value => database.confirmSeparation(JSON.parse(value || "{}"))
     };
-    const permissionByMethod={salvarProduto:"cadastro",editarProduto:"cadastro",listarProdutos:"produtos",listarEstoqueMinimo:"produtos",criarPedido:"separacao",listarPedidos:"separacao",obterPedido:"separacao",registrarEntrada:"entrada",listarLotes:"entrada",salvarEndereco:"enderecos",listarEnderecos:"enderecos",consultarEstoque:"consulta_estoque",previewSeparacao:"separacao",confirmarSeparacao:"separacao",listarMovimentacoes:"movimentacoes"};
+    const permissionByMethod={salvarProduto:"cadastro",editarProduto:"cadastro",listarProdutos:"produtos",salvarCliente:"separacao",listarClientes:"separacao",listarEstoqueMinimo:"produtos",criarPedido:"separacao",listarPedidos:"separacao",obterPedido:"separacao",registrarEntrada:"entrada",listarLotes:"entrada",salvarEndereco:"enderecos",listarEnderecos:"enderecos",consultarEstoque:"consulta_estoque",previewSeparacao:"separacao",confirmarSeparacao:"separacao",listarMovimentacoes:"movimentacoes"};
     const adminOnly=new Set(["listarUsuarios","salvarUsuario","alternarUsuario","listarSessoesLan","listarAuditoriaOperadores","listarAuditoria"]);
     const publicMethods=new Set(["statusAuth","criarAdminInicial","login","logout","enderecoLan"]);
     for(const [name,fn] of Object.entries(methods)){
