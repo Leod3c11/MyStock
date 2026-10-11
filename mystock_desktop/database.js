@@ -478,6 +478,35 @@ class MyStockDatabase {
     return this.ok({ message: "Entrada registrada. Saldo atual: " + saldo + " unidade(s).", saldo });
   }
 
+  moveStock(data) {
+    const produtoId=Number(data.produto_id), loteId=Number(data.lote_id);
+    const origem=String(data.origem||"").trim().toUpperCase(), destino=String(data.destino||"").trim().toUpperCase(), quantidade=Number(data.quantidade);
+    if(!produtoId||!loteId||!origem||!destino) this.fail("Informe produto, lote, origem e destino.");
+    if(origem===destino) this.fail("Origem e destino precisam ser diferentes.");
+    if(!Number.isInteger(quantidade)||quantidade<=0) this.fail("A quantidade deve ser um inteiro maior que zero.");
+    const tx=this.db.transaction(()=>{
+      const item=this.db.prepare("SELECT p.numero,p.nome,l.lote FROM produtos p JOIN lotes l ON l.produto_id=p.id WHERE p.id=? AND l.id=?").get(produtoId,loteId);
+      if(!item) this.fail("Produto ou lote não encontrado.");
+      const from=this.db.prepare("SELECT en.id,en.codigo,e.quantidade FROM enderecos en JOIN estoque e ON e.endereco_id=en.id WHERE UPPER(en.codigo)=? AND e.lote_id=?").get(origem,loteId);
+      if(!from||Number(from.quantidade)<quantidade) this.fail("Saldo insuficiente no endereço de origem.");
+      const to=this.db.prepare("SELECT id,codigo,capacidade_maxima FROM enderecos WHERE UPPER(codigo)=?").get(destino);
+      if(!to) this.fail("Endereço de destino não cadastrado.");
+      const occupied=this.db.prepare("SELECT COALESCE(SUM(quantidade),0) AS total FROM estoque WHERE endereco_id=?").get(to.id).total;
+      const free=Number(to.capacidade_maxima)-Number(occupied);
+      if(quantidade>free) this.fail("Capacidade insuficiente no destino. Espaço disponível: "+free+" unidade(s).");
+      this.db.prepare("UPDATE estoque SET quantidade=quantidade-? WHERE lote_id=? AND endereco_id=?").run(quantidade,loteId,from.id);
+      this.db.prepare("DELETE FROM estoque WHERE lote_id=? AND endereco_id=? AND quantidade<=0").run(loteId,from.id);
+      this.db.prepare("INSERT OR IGNORE INTO estoque(lote_id,endereco_id,quantidade) VALUES(?,?,0)").run(loteId,to.id);
+      this.db.prepare("UPDATE estoque SET quantidade=quantidade+? WHERE lote_id=? AND endereco_id=?").run(quantidade,loteId,to.id);
+      const sourceBalance=this.db.prepare("SELECT quantidade FROM estoque WHERE lote_id=? AND endereco_id=?").get(loteId,from.id)?.quantidade||0;
+      const targetBalance=this.db.prepare("SELECT quantidade FROM estoque WHERE lote_id=? AND endereco_id=?").get(loteId,to.id).quantidade;
+      this.addMovement("SAIDA_TRANSFERENCIA",item.numero,item.nome,item.lote,origem,-quantidade,sourceBalance);
+      this.addMovement("ENTRADA_TRANSFERENCIA",item.numero,item.nome,item.lote,destino,quantidade,targetBalance);
+      return {sourceBalance,targetBalance};
+    });
+    const result=tx();
+    return this.ok({message:"Movimentação concluída: "+quantidade+" unidade(s) de "+origem+" para "+destino+".",...result});
+  }
   listStock(filtro) {
     let sql = `SELECT p.id AS produto_id, l.id AS lote_id, p.numero, p.codigo_barras, p.nome, l.lote, l.unidades_por_caixa,
       l.fabricacao, l.vencimento, en.codigo AS endereco, e.quantidade
