@@ -158,7 +158,9 @@ function startLanServer(db) {
         return send(res,403,{ok:false,error:"Somente o administrador pode mover estoque entre endereços."});
       if ((name==="listarAuditoriaOperadores"||name==="listarAuditoria") && user.role!=="admin")
         return send(res,403,{ok:false,error:"Apenas o administrador pode consultar a auditoria dos operadores."});
-      const permission = permissionByMethod[name];
+      if(name==="criarTarefaMovimentacao" && user.role!=="admin") return send(res,403,{ok:false,error:"Somente o administrador pode criar tarefas."});
+       if(name==="cancelarTarefaMovimentacao" && user.role!=="admin") return send(res,403,{ok:false,error:"Somente o administrador pode cancelar tarefas."});
+       const permission = permissionByMethod[name];
       if (permission && user.role !== "admin" && user.permissoes?.[permission] !== true)
         return send(res, 403, {ok:false,error:"Seu usuário não tem permissão para esta operação."});
       let payload = body.payload ?? "";
