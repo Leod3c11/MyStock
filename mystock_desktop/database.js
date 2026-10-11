@@ -195,7 +195,8 @@ class MyStockDatabase {
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         numero TEXT NOT NULL UNIQUE,
         codigo_barras TEXT,
-        nome TEXT NOT NULL
+        nome TEXT NOT NULL,
+        estoque_minimo INTEGER NOT NULL DEFAULT 0
       );
       CREATE UNIQUE INDEX IF NOT EXISTS idx_produtos_codigo_barras
         ON produtos(codigo_barras)
@@ -260,6 +261,10 @@ class MyStockDatabase {
         UNIQUE(pedido_id, produto_id)
       );
     `);
+    const productColumns = this.rows("PRAGMA table_info(produtos)");
+    if (!productColumns.some(col => col.name === "estoque_minimo")) {
+      this.db.exec("ALTER TABLE produtos ADD COLUMN estoque_minimo INTEGER NOT NULL DEFAULT 0");
+    }
   }
 
   ok(extra = {}) { return { ok: true, ...extra }; }
@@ -349,6 +354,11 @@ class MyStockDatabase {
       this.db.prepare("UPDATE produtos SET codigo_barras = ?, nome = ? WHERE numero = ?")
         .run(codigo || null, nome, numero);
       const pid = this.productId(numero);
+      if (Object.prototype.hasOwnProperty.call(data, "estoque_minimo")) {
+        const minimo = Number.parseInt(data.estoque_minimo, 10);
+        if (!Number.isInteger(minimo) || minimo < 0) this.fail("O estoque mínimo precisa ser um número inteiro igual ou maior que zero.");
+        this.db.prepare("UPDATE produtos SET estoque_minimo = ? WHERE id = ?").run(minimo, pid);
+      }
       this.db.prepare("INSERT OR IGNORE INTO lotes(produto_id, lote, unidades_por_caixa, fabricacao, vencimento) VALUES (?, ?, ?, ?, ?)")
         .run(pid, lote, qc, fabricacao, vencimento);
       this.db.prepare("UPDATE lotes SET unidades_por_caixa = ?, fabricacao = ?, vencimento = ? WHERE produto_id = ? AND lote = ?")
@@ -432,12 +442,16 @@ class MyStockDatabase {
     const nome=String(data.nome||"").trim(), lote=String(data.lote||"").trim();
     const qc=Number.parseInt(data.unidades_por_caixa,10)||0;
     const fabricacao=this.normalizeDate(data.fabricacao), vencimento=this.normalizeDate(data.vencimento);
+    const minimoInformado=Object.prototype.hasOwnProperty.call(data,"estoque_minimo");
+    const estoqueMinimo=Number.parseInt(data.estoque_minimo,10);
+    if(minimoInformado&&(!Number.isInteger(estoqueMinimo)||estoqueMinimo<0)) this.fail("O estoque mínimo precisa ser um número inteiro igual ou maior que zero.");
     if(!produtoId||!loteId||!numero||!nome||!lote) this.fail("Confira o produto, lote, número e nome.");
     if(qc<=0) this.fail("Unidades por caixa precisa ser maior que zero.");
     if(!this.db.prepare("SELECT id FROM lotes WHERE id=? AND produto_id=?").get(loteId,produtoId)) this.fail("Produto ou lote não encontrado. Atualize a consulta.");
     try {
       this.db.transaction(()=>{
         this.db.prepare("UPDATE produtos SET numero=?,codigo_barras=?,nome=? WHERE id=?").run(numero,codigo||null,nome,produtoId);
+        if(minimoInformado) this.db.prepare("UPDATE produtos SET estoque_minimo=? WHERE id=?").run(estoqueMinimo,produtoId);
         this.db.prepare("UPDATE lotes SET lote=?,unidades_por_caixa=?,fabricacao=?,vencimento=? WHERE id=?").run(lote,qc,fabricacao,vencimento,loteId);
       })();
     } catch(error) {
@@ -482,8 +496,9 @@ class MyStockDatabase {
   }
 
   listProducts(filtro) {
-    let sql = `SELECT p.id AS produto_id, l.id AS lote_id, p.numero, p.codigo_barras, p.nome, l.lote, l.unidades_por_caixa,
-      l.fabricacao, l.vencimento, COALESCE(SUM(e.quantidade), 0) AS saldo_total
+    let sql = `SELECT p.id AS produto_id, l.id AS lote_id, p.numero, p.codigo_barras, p.nome, p.estoque_minimo,
+      (SELECT COALESCE(SUM(e2.quantidade),0) FROM estoque e2 JOIN lotes l2 ON l2.id=e2.lote_id WHERE l2.produto_id=p.id) AS saldo_produto,
+      l.lote, l.unidades_por_caixa, l.fabricacao, l.vencimento, COALESCE(SUM(e.quantidade), 0) AS saldo_total
       FROM produtos p JOIN lotes l ON l.produto_id = p.id
       LEFT JOIN estoque e ON e.lote_id = l.id`;
     const params = [];
@@ -491,10 +506,22 @@ class MyStockDatabase {
       sql += " WHERE p.numero = ? OR p.codigo_barras = ? OR p.nome LIKE ?";
       params.push(filtro.trim(), filtro.trim(), "%" + filtro.trim() + "%");
     }
-    sql += ` GROUP BY p.id, p.numero, p.codigo_barras, p.nome, l.id, l.lote,
+    sql += ` GROUP BY p.id, p.numero, p.codigo_barras, p.nome, p.estoque_minimo, l.id, l.lote,
       l.unidades_por_caixa, l.fabricacao, l.vencimento
       ORDER BY p.numero, substr(l.vencimento, 7, 4) || '-' || substr(l.vencimento, 4, 2) || '-' || substr(l.vencimento, 1, 2), l.lote`;
     return this.ok({ itens: this.rows(sql, params) });
+  }
+
+  listLowStock() {
+    const sql = `SELECT p.id AS produto_id, p.numero, p.codigo_barras, p.nome, p.estoque_minimo,
+      COALESCE(SUM(e.quantidade), 0) AS saldo_total
+      FROM produtos p
+      LEFT JOIN lotes l ON l.produto_id = p.id
+      LEFT JOIN estoque e ON e.lote_id = l.id
+      GROUP BY p.id, p.numero, p.codigo_barras, p.nome, p.estoque_minimo
+      HAVING p.estoque_minimo > 0 AND COALESCE(SUM(e.quantidade), 0) <= p.estoque_minimo
+      ORDER BY (p.estoque_minimo - COALESCE(SUM(e.quantidade), 0)) DESC, p.numero`;
+    return this.ok({ itens: this.rows(sql) });
   }
 
   listMovements(filtro) {
