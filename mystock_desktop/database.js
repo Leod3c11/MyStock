@@ -536,7 +536,7 @@ class MyStockDatabase {
       if(!task) this.fail("Tarefa não encontrada.");
       if(task.status!=="PENDENTE" && task.status!=="EM_EXECUCAO") this.fail("Esta tarefa já foi encerrada.");
       if(quantity!==Number(task.quantidade)) this.fail("A quantidade confirmada precisa ser igual à quantidade solicitada ("+task.quantidade+"). Se a movimentação real foi diferente, solicite ao administrador o cancelamento e a criação de uma nova tarefa.");
-      const result=this.moveStock({produto_id:task.produto_id,lote_id:task.lote_id,origem:task.origem,destino:task.destino,quantidade});
+      const result=this.moveStock({produto_id:task.produto_id,lote_id:task.lote_id,origem:task.origem,destino:task.destino,quantidade:quantity});
       this.db.prepare("UPDATE tarefas_movimentacao SET status='CONCLUIDA',executado_por=?,executado_em=? WHERE id=? AND status IN ('PENDENTE','EM_EXECUCAO')")
         .run(String(executor||"Operador"),this.now(),id);
       return {message:"Tarefa #"+id+" concluída. "+result.message};
