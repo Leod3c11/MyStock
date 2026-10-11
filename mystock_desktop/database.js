@@ -368,21 +368,27 @@ class MyStockDatabase {
     const lote = String(data.lote || "").trim();
     const endereco = String(data.endereco || "").trim().toUpperCase();
     const quantidade = Number.parseInt(data.quantidade, 10) || 0;
-    if (!numero || !lote || !endereco) this.fail("Informe produto, lote e endereço.");
+    if (!numero || !lote || !endereco) this.fail("Informe número do produto, lote e endereço.");
     if (quantidade <= 0) this.fail("Quantidade de entrada precisa ser maior que zero.");
 
     const tx = this.db.transaction(() => {
-      const product = this.db.prepare(`SELECT l.id AS lote_id, p.numero, p.nome
+      const product = this.db.prepare(`SELECT l.id AS lote_id, p.numero, p.nome, l.lote AS lote_real
         FROM lotes l JOIN produtos p ON p.id = l.produto_id
-        WHERE (p.numero = ? OR p.codigo_barras = ?) AND l.lote = ?`).get(numero, numero, lote);
-      if (!product) this.fail("Produto não encontrado. Cadastre primeiro.");
+        WHERE (TRIM(p.numero) = ? OR TRIM(COALESCE(p.codigo_barras, '')) = ?)
+          AND UPPER(TRIM(l.lote)) = UPPER(?)`).get(numero, numero, lote);
+      if (!product) {
+        const existeProduto = this.db.prepare("SELECT 1 FROM produtos WHERE TRIM(numero)=? OR TRIM(COALESCE(codigo_barras,''))=?").get(numero, numero);
+        if (!existeProduto) this.fail("Produto não encontrado. Confira o número ou código de barras cadastrado.");
+        this.fail("Lote não encontrado para este produto. Use “Selecionar lote cadastrado” para escolher um lote existente.");
+      }
       const enderecoId = this.addressId(endereco);
       if (enderecoId < 0) this.fail("Endereço não cadastrado. Cadastre o endereço e sua capacidade primeiro.");
       const loc = this.db.prepare(`SELECT en.capacidade_maxima,
         COALESCE(SUM(e.quantidade), 0) AS ocupado FROM enderecos en
         LEFT JOIN estoque e ON e.endereco_id = en.id WHERE en.id = ?
         GROUP BY en.id, en.capacidade_maxima`).get(enderecoId);
-      const disponivel = loc.capacidade_maxima - loc.ocupado;
+      if (!loc) this.fail("Não foi possível consultar a capacidade do endereço. Atualize os endereços e tente novamente.");
+      const disponivel = Number(loc.capacidade_maxima) - Number(loc.ocupado);
       if (quantidade > disponivel)
         this.fail("Capacidade insuficiente no endereço " + endereco + ". Disponível: " + disponivel +
           " unidade(s). Entrada: " + quantidade + " unidade(s).");
@@ -392,11 +398,11 @@ class MyStockDatabase {
         .run(quantidade, product.lote_id, enderecoId);
       const saldo = this.db.prepare("SELECT quantidade FROM estoque WHERE lote_id = ? AND endereco_id = ?")
         .get(product.lote_id, enderecoId).quantidade;
-      this.addMovement("ENTRADA", product.numero, product.nome, lote, endereco, quantidade, saldo);
+      this.addMovement("ENTRADA", product.numero, product.nome, product.lote_real, endereco, quantidade, saldo);
       return saldo;
     });
     const saldo = tx();
-    return this.ok({ message: "Entrada registrada. Saldo atual: " + saldo + " unidade(s)." });
+    return this.ok({ message: "Entrada registrada. Saldo atual: " + saldo + " unidade(s).", saldo });
   }
 
   listStock(filtro) {
@@ -476,7 +482,7 @@ class MyStockDatabase {
   }
 
   listProducts(filtro) {
-    let sql = `SELECT p.numero, p.codigo_barras, p.nome, l.lote, l.unidades_por_caixa,
+    let sql = `SELECT p.id AS produto_id, l.id AS lote_id, p.numero, p.codigo_barras, p.nome, l.lote, l.unidades_por_caixa,
       l.fabricacao, l.vencimento, COALESCE(SUM(e.quantidade), 0) AS saldo_total
       FROM produtos p JOIN lotes l ON l.produto_id = p.id
       LEFT JOIN estoque e ON e.lote_id = l.id`;
