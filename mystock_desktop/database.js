@@ -598,8 +598,9 @@ class MyStockDatabase {
       LEFT JOIN estoque e ON e.lote_id = l.id`;
     const params = [];
     if (filtro.trim()) {
-      sql += " WHERE p.numero = ? OR p.codigo_barras = ? OR p.nome LIKE ?";
-      params.push(filtro.trim(), filtro.trim(), "%" + filtro.trim() + "%");
+      const termo = "%" + filtro.trim() + "%";
+      sql += " WHERE p.numero LIKE ? OR p.codigo_barras LIKE ? OR p.nome LIKE ? OR l.lote LIKE ?";
+      params.push(termo, termo, termo, termo);
     }
     sql += ` GROUP BY p.id, p.numero, p.codigo_barras, p.nome, p.estoque_minimo, l.id, l.lote,
       l.unidades_por_caixa, l.fabricacao, l.vencimento
