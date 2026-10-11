@@ -407,7 +407,7 @@
       <div id="separacaoOrdemMsg" class="msg" role="status"></div>
     </section>
     <div id="separacaoWorkArea" style="display:none">
-      <section>
+      <section id="separacaoListaOrdem">
         <h2>Etapa 2 — Itens da ordem</h2>
         <div id="separacaoOrdemResumo"></div>
         <div id="separacaoItensOrdem"></div>
@@ -707,6 +707,7 @@ function validarOrdemSeparacao(){
     ordemSeparacaoAtual=d;
     $("separacaoOrdemGate").style.display="none";
     $("separacaoWorkArea").style.display="block";
+    $("separacaoListaOrdem").style.display="block";
     $("separacaoProdutoBox").style.display="none";
     $("confirmBox").style.display="none";
     $("separacaoOrdemResumo").innerHTML='<div class="item"><b>Ordem:</b> '+esc(d.pedido.numero)+'<div class="line"><b>Cliente/remessa:</b> '+esc(d.pedido.cliente||"Não informado")+'</div><div class="line"><b>Status:</b> '+esc(d.pedido.status)+'</div><div class="line"><b>Itens pendentes:</b> '+pendentes.length+'</div></div>';
@@ -729,15 +730,18 @@ function selecionarItemOrdemSeparacao(itemId){
   $("produto").value=item.produto_numero;
   $("quantidade").value=item.quantidade;
   $("separacaoItemAtual").innerHTML='<div class="item"><b>'+esc(item.produto_numero)+' — '+esc(item.nome)+'</b><div class="line">Separar a quantidade exata da ordem: '+esc(item.quantidade)+' unidade(s)</div></div>';
-  $("separacaoProdutoBox").style.display="block";
-  $("confirmBox").style.display="none";
+  $("separacaoListaOrdem").style.display="none";
+  $("separacaoProdutoBox").style.display="none";
+  $("confirmBox").style.display="block";
   $("resultado").innerHTML="";
   clearMsg($("confirmMsg"));
-  $("separacaoProdutoBox").scrollIntoView({behavior:"smooth",block:"start"});
+  buscarOrientacao();
+  $("confirmBox").scrollIntoView({behavior:"smooth",block:"start"});
 }
 function voltarIdentificacaoOrdem(){
   ordemSeparacaoAtual=null;itemOrdemSeparacaoAtual=null;currentPreview=null;
   $("separacaoWorkArea").style.display="none";
+  $("separacaoListaOrdem").style.display="block";
   $("separacaoOrdemGate").style.display="block";
   $("separacaoProdutoBox").style.display="none";
   $("confirmBox").style.display="none";
@@ -766,7 +770,7 @@ function confirmarSeparacao(){
     showMsg($("confirmMsg"),data.message,true);$("confirmar").disabled=true;
     ordemSeparacaoAtual=call("obterPedido",{numero:ordemSeparacaoAtual.pedido.numero});
     itemOrdemSeparacaoAtual=null;currentPreview=null;
-    $("separacaoProdutoBox").style.display="none";$("confirmBox").style.display="none";$("resultado").innerHTML="";
+    $("separacaoProdutoBox").style.display="none";$("confirmBox").style.display="none";$("separacaoListaOrdem").style.display="block";$("resultado").innerHTML="";
     $("separacaoOrdemResumo").innerHTML='<div class="item"><b>Ordem:</b> '+esc(ordemSeparacaoAtual.pedido.numero)+'<div class="line"><b>Cliente/remessa:</b> '+esc(ordemSeparacaoAtual.pedido.cliente||"Não informado")+'</div><div class="line"><b>Status:</b> '+esc(ordemSeparacaoAtual.pedido.status)+'</div><div class="line"><b>Itens pendentes:</b> '+ordemSeparacaoAtual.itens.filter(i=>i.status==="PENDENTE").length+'</div></div>';
     renderItensOrdemSeparacao();
   }catch(e){showMsg($("confirmMsg"),e.message,false);}
