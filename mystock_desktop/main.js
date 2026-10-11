@@ -154,6 +154,8 @@ function startLanServer(db) {
       const name = String(body.method || "");
       const method = methods[name];
       if (!method) return send(res, 400, {ok:false,error:"Operação desconhecida."});
+      if (name==="moverEstoque" && user.role!=="admin")
+        return send(res,403,{ok:false,error:"Somente o administrador pode mover estoque entre endereços."});
       if ((name==="listarAuditoriaOperadores"||name==="listarAuditoria") && user.role!=="admin")
         return send(res,403,{ok:false,error:"Apenas o administrador pode consultar a auditoria dos operadores."});
       const permission = permissionByMethod[name];
