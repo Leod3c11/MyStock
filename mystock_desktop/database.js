@@ -270,6 +270,22 @@ class MyStockDatabase {
         saldo_apos INTEGER NOT NULL,
         data_hora TEXT NOT NULL
       );
+      CREATE TABLE IF NOT EXISTS tarefas_movimentacao (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        produto_id INTEGER NOT NULL REFERENCES produtos(id),
+        lote_id INTEGER NOT NULL REFERENCES lotes(id),
+        origem TEXT NOT NULL,
+        destino TEXT NOT NULL,
+        quantidade INTEGER NOT NULL CHECK(quantidade > 0),
+        status TEXT NOT NULL DEFAULT 'PENDENTE',
+        solicitado_por TEXT NOT NULL,
+        criado_em TEXT NOT NULL,
+        executado_por TEXT NOT NULL DEFAULT '',
+        executado_em TEXT NOT NULL DEFAULT '',
+        cancelado_por TEXT NOT NULL DEFAULT '',
+        cancelado_em TEXT NOT NULL DEFAULT ''
+      );
+      CREATE INDEX IF NOT EXISTS idx_tarefas_mov_status ON tarefas_movimentacao(status, criado_em DESC);
       CREATE TABLE IF NOT EXISTS usuarios (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         username TEXT NOT NULL UNIQUE COLLATE NOCASE,
@@ -476,6 +492,63 @@ class MyStockDatabase {
     });
     const saldo = tx();
     return this.ok({ message: "Entrada registrada. Saldo atual: " + saldo + " unidade(s).", saldo });
+  }
+
+  createMoveTask(data, requester) {
+    const produtoId=Number(data.produto_id), loteId=Number(data.lote_id);
+    const origem=String(data.origem||"").trim().toUpperCase(), destino=String(data.destino||"").trim().toUpperCase(), quantidade=Number(data.quantidade);
+    if(!produtoId||!loteId||!origem||!destino) this.fail("Informe produto, lote, origem e destino.");
+    if(origem===destino) this.fail("Origem e destino precisam ser diferentes.");
+    if(!Number.isInteger(quantidade)||quantidade<=0) this.fail("A quantidade deve ser um inteiro maior que zero.");
+    const product=this.db.prepare("SELECT p.id,l.id AS lote_id FROM produtos p JOIN lotes l ON l.produto_id=p.id WHERE p.id=? AND l.id=?").get(produtoId,loteId);
+    if(!product) this.fail("Produto ou lote não encontrado.");
+    const from=this.db.prepare("SELECT e.quantidade FROM estoque e JOIN enderecos en ON en.id=e.endereco_id WHERE e.lote_id=? AND UPPER(en.codigo)=?").get(loteId,origem);
+    if(!from||Number(from.quantidade)<quantidade) this.fail("O endereço de origem não possui saldo suficiente para a tarefa.");
+    const to=this.db.prepare("SELECT en.id,en.capacidade_maxima,COALESCE((SELECT SUM(e.quantidade) FROM estoque e WHERE e.endereco_id=en.id),0) AS ocupado FROM enderecos en WHERE UPPER(en.codigo)=?").get(destino);
+    if(!to) this.fail("Endereço de destino não cadastrado.");
+    if(quantidade>Number(to.capacidade_maxima)-Number(to.ocupado)) this.fail("O destino não possui capacidade suficiente para a tarefa.");
+    const pending=this.db.prepare("SELECT COALESCE(SUM(quantidade),0) AS total FROM tarefas_movimentacao WHERE lote_id=? AND UPPER(origem)=? AND status='PENDENTE'").get(loteId,origem).total;
+    if(Number(from.quantidade)-Number(pending)<quantidade) this.fail("Já existem tarefas pendentes que reservam parte desse saldo.");
+    const info=this.db.prepare("SELECT p.numero,p.nome,l.lote FROM produtos p JOIN lotes l ON l.produto_id=p.id WHERE p.id=? AND l.id=?").get(produtoId,loteId);
+    const result=this.db.prepare("INSERT INTO tarefas_movimentacao(produto_id,lote_id,origem,destino,quantidade,status,solicitado_por,criado_em) VALUES(?,?,?,?,?,'PENDENTE',?,?)")
+      .run(produtoId,loteId,origem,destino,quantidade,String(requester||"Administrador"),this.now());
+    return this.ok({message:"Tarefa #"+result.lastInsertRowid+" criada. O saldo será alterado somente quando um operador concluir a tarefa.",id:Number(result.lastInsertRowid),produto:info});
+  }
+
+  listMoveTasks(status, requesterRole) {
+    const filter=String(status||"").trim().toUpperCase();
+    let sql=`SELECT t.id,t.produto_id,t.lote_id,p.numero AS produto_numero,p.nome AS produto_nome,l.lote,t.origem,t.destino,t.quantidade,t.status,t.solicitado_por,t.criado_em,t.executado_por,t.executado_em,t.cancelado_por,t.cancelado_em
+      FROM tarefas_movimentacao t JOIN produtos p ON p.id=t.produto_id JOIN lotes l ON l.id=t.lote_id`;
+    const params=[];
+    if(filter && ["PENDENTE","EM_EXECUCAO","CONCLUIDA","CANCELADA"].includes(filter)){sql+=" WHERE t.status=?";params.push(filter);}
+    sql+=" ORDER BY CASE t.status WHEN 'PENDENTE' THEN 0 WHEN 'EM_EXECUCAO' THEN 1 ELSE 2 END,t.criado_em DESC,t.id DESC LIMIT 500";
+    return this.ok({itens:this.rows(sql,params)});
+  }
+
+  executeMoveTask(data, executor) {
+    const id=Number(data.id), quantity=Number(data.quantidade_confirmada);
+    if(!Number.isInteger(id)||id<=0) this.fail("Tarefa inválida.");
+    if(!Number.isInteger(quantity)||quantity<=0) this.fail("Informe a quantidade efetivamente movimentada.");
+    const tx=this.db.transaction(()=>{
+      const task=this.db.prepare("SELECT * FROM tarefas_movimentacao WHERE id=?").get(id);
+      if(!task) this.fail("Tarefa não encontrada.");
+      if(task.status!=="PENDENTE" && task.status!=="EM_EXECUCAO") this.fail("Esta tarefa já foi encerrada.");
+      if(quantity!==Number(task.quantidade)) this.fail("A quantidade confirmada precisa ser igual à quantidade solicitada ("+task.quantidade+"). Se a movimentação real foi diferente, solicite ao administrador o cancelamento e a criação de uma nova tarefa.");
+      const result=this.moveStock({produto_id:task.produto_id,lote_id:task.lote_id,origem:task.origem,destino:task.destino,quantidade});
+      this.db.prepare("UPDATE tarefas_movimentacao SET status='CONCLUIDA',executado_por=?,executado_em=? WHERE id=? AND status IN ('PENDENTE','EM_EXECUCAO')")
+        .run(String(executor||"Operador"),this.now(),id);
+      return {message:"Tarefa #"+id+" concluída. "+result.message};
+    });
+    return this.ok(tx());
+  }
+
+  cancelMoveTask(id, canceller) {
+    const taskId=Number(id);
+    if(!Number.isInteger(taskId)||taskId<=0)this.fail("Tarefa inválida.");
+    const result=this.db.prepare("UPDATE tarefas_movimentacao SET status='CANCELADA',cancelado_por=?,cancelado_em=? WHERE id=? AND status='PENDENTE'")
+      .run(String(canceller||"Administrador"),this.now(),taskId);
+    if(!result.changes)this.fail("A tarefa não existe ou já foi iniciada/concluída; somente tarefas pendentes podem ser canceladas.");
+    return this.ok({message:"Tarefa #"+taskId+" cancelada."});
   }
 
   moveStock(data) {
