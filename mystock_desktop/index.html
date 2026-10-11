@@ -398,9 +398,31 @@
   <div id="screen-pedidos" class="screen"><div class="screen-title"><button class="back-btn" data-screen="menu">Voltar</button><h2>Gerar pedidos / ordens</h2></div><section><h2>Novo pedido</h2><label>Cliente ou referência (opcional)</label><input id="pedidoCliente" placeholder="Cliente / remessa"><label>Produto</label><select id="pedidoProduto"><option value="">Carregando produtos...</option></select><label>Quantidade solicitada (unidades)</label><input id="pedidoQuantidade" inputmode="numeric"><button id="adicionarItemPedido">Adicionar item</button><div id="pedidoItensRascunho"></div><button id="gerarPedido">Gerar número da ordem</button><div id="pedidoMsg" class="msg"></div></section><section><h2>Pedidos gerados</h2><label>Filtrar por ordem ou cliente</label><input id="pedidoFiltro"><button id="consultarPedidos">Atualizar pedidos</button><div id="pedidosResultado"></div></section></div>
   <div id="screen-separacao" class="screen">
     <div class="screen-title"><button class="back-btn" data-screen="menu">Voltar</button><h2>Separação</h2></div>
-    <section><h2>Bipar Produto</h2><div id="reader"></div><button id="startScanner">Abrir câmera</button><div id="scanMsg" class="msg"></div></section>
-    <section><h2>Pedido do Cliente</h2><label>Número do produto</label><input id="produto" inputmode="numeric"><label>Quantidade solicitada</label><input id="quantidade" inputmode="numeric"><button id="buscar">Ver orientação</button><div id="resultado"></div></section>
-    <section id="confirmBox" style="display:none"><h2>Confirmar Separação</h2><div id="confirmItens"></div><button id="confirmar">Confirmar e baixar estoque</button><button id="cancelar" class="danger">Cancelar</button><div id="confirmMsg" class="msg"></div></section>
+    <section id="separacaoOrdemGate">
+      <h2>Etapa 1 — Identificar ordem de remessa</h2>
+      <p class="line">Digite o número da ordem de remessa para carregar os itens que precisam ser separados.</p>
+      <label for="separacaoNumeroOrdem">Número da ordem de remessa</label>
+      <input id="separacaoNumeroOrdem" autocomplete="off" placeholder="Ex.: ORD-20261011-0001">
+      <button id="validarOrdemSeparacao">Validar ordem e continuar</button>
+      <div id="separacaoOrdemMsg" class="msg" role="status"></div>
+    </section>
+    <div id="separacaoWorkArea" style="display:none">
+      <section>
+        <h2>Etapa 2 — Itens da ordem</h2>
+        <div id="separacaoOrdemResumo"></div>
+        <div id="separacaoItensOrdem"></div>
+        <button id="trocarOrdemSeparacao" class="secondary">Voltar à identificação da ordem</button>
+      </section>
+      <section id="separacaoProdutoBox" style="display:none">
+        <h2>Etapa 3 — Separar item selecionado</h2>
+        <div id="separacaoItemAtual"></div>
+        <h3>Bipar Produto (opcional)</h3><div id="reader"></div><button id="startScanner">Abrir câmera</button><div id="scanMsg" class="msg"></div>
+        <label for="produto">Número do produto</label><input id="produto" inputmode="numeric" readonly>
+        <label for="quantidade">Quantidade solicitada (unidades)</label><input id="quantidade" inputmode="numeric" readonly>
+        <button id="buscar">Ver orientação de separação</button><div id="resultado"></div>
+      </section>
+      <section id="confirmBox" style="display:none"><h2>Confirmar Separação</h2><div id="confirmItens"></div><button id="confirmar">Confirmar e baixar estoque</button><button id="cancelar" class="danger">Cancelar</button><div id="confirmMsg" class="msg"></div></section>
+    </div>
   </div>
 
   <div id="screen-movimentacoes" class="screen">
@@ -670,8 +692,85 @@ function salvarEndereco(){ clearMsg($("endMsg")); try{ const data=call("salvarEn
 function abrirDetalheEndereco(item){ enderecoDetalheAtual=item; clearMsg($("endDetalheMsg")); $("endDetalheCapacidade").value=item.capacidade_maxima; $("endDetalheResumo").innerHTML=`<div class="item"><div class="line"><b>Endereço:</b> ${esc(item.codigo)}</div><div class="line"><b>Ocupado:</b> ${esc(item.ocupado)}</div><div class="line"><b>Capacidade atual:</b> ${esc(item.capacidade_maxima)}</div><span class="strong">Disponível: ${esc(item.disponivel)}</span></div>`; showScreen("endereco-detalhe"); }
 function salvarEnderecoDetalhe(){ if(!enderecoDetalheAtual)return; clearMsg($("endDetalheMsg")); try{ const data=call("salvarEndereco",{codigo:enderecoDetalheAtual.codigo,capacidade_maxima:parseInt($("endDetalheCapacidade").value,10)}); showMsg($("endDetalheMsg"),data.message,true); }catch(e){ showMsg($("endDetalheMsg"),e.message,false); } }
 function consultarEstoque(){ try{ const data=call("consultarEstoque",$("estNumero").value.trim()); renderItems($("estoqueResultado"),data.itens,item=>`<div class="item"><div class="line"><b>${esc(item.numero)} - ${esc(item.nome)}</b></div>${item.codigo_barras?`<div class="line"><b>QR / código:</b> ${esc(item.codigo_barras)}</div>`:""}<div class="line"><b>Lote:</b> ${esc(item.lote)}</div><div class="line"><b>Endereço:</b> ${esc(item.endereco)}</div><span class="strong">Saldo: ${esc(item.quantidade)} unidade(s)</span><div class="line" style="margin-top:6px;"><b>QC:</b> ${esc(item.unidades_por_caixa)} unidade(s) por caixa</div><div class="line"><b>Fabricação:</b> ${esc(item.fabricacao)}</div><div class="line"><b>Vencimento:</b> ${esc(item.vencimento)}</div></div>`); }catch(e){ $("estoqueResultado").innerHTML=`<div class="msg err">${esc(e.message)}</div>`; } }
-function buscarOrientacao(){ $("confirmBox").style.display="none"; try{ currentPreview=call("previewSeparacao",{numero:$("produto").value.trim(),quantidade:parseInt($("quantidade").value,10)}); $("resultado").innerHTML=`<div class="item"><b>Produto:</b> ${esc(currentPreview.produto)} - ${esc(currentPreview.nome)}<br><b>Solicitado:</b> ${esc(currentPreview.quantidade_pedida)} unidade(s)</div>`; $("confirmItens").innerHTML=currentPreview.orientacoes.map((item,idx)=>`<div class="item"><b>Item ${idx+1}</b><div class="line"><b>Lote:</b> ${esc(item.lote)}</div><div class="line"><b>Endereço:</b> ${esc(item.endereco)}</div><span class="strong">Separar: ${esc(item.qtd_operador)} ${esc(item.unidade_operador)}</span><label>Digite a quantidade de ${esc(item.unidade_operador)} que você pegou</label><input class="confirmInput" inputmode="numeric" data-index="${idx}"></div>`).join(""); $("confirmBox").style.display="block"; $("confirmar").disabled=false; }catch(e){ $("resultado").innerHTML=`<div class="msg err">${esc(e.message)}</div>`; } }
-function confirmarSeparacao(){ if(!currentPreview)return; try{ const confirmacoes=[...document.querySelectorAll(".confirmInput")].map(i=>({index:parseInt(i.dataset.index,10),quantidade_confirmada:parseInt(i.value,10)})); const data=call("confirmarSeparacao",{token:currentPreview.token,confirmacoes}); showMsg($("confirmMsg"),data.message,true); $("confirmar").disabled=true; }catch(e){ showMsg($("confirmMsg"),e.message,false); } }
+let ordemSeparacaoAtual=null;
+let itemOrdemSeparacaoAtual=null;
+function validarOrdemSeparacao(){
+  clearMsg($("separacaoOrdemMsg"));
+  const numero=$("separacaoNumeroOrdem").value.trim().toUpperCase();
+  if(!numero){showMsg($("separacaoOrdemMsg"),"Digite o número da ordem de remessa para continuar.",false);return;}
+  try{
+    const d=call("obterPedido",{numero});
+    if(!d.pedido||!Array.isArray(d.itens))throw Error("Não foi possível carregar os itens desta ordem.");
+    if(d.pedido.status==="CONCLUIDO"||d.pedido.status==="CANCELADO")throw Error("Esta ordem já foi concluída ou não está disponível para separação.");
+    const pendentes=d.itens.filter(i=>i.status==="PENDENTE");
+    if(!pendentes.length)throw Error("Esta ordem não possui itens pendentes para separar.");
+    ordemSeparacaoAtual=d;
+    $("separacaoOrdemGate").style.display="none";
+    $("separacaoWorkArea").style.display="block";
+    $("separacaoProdutoBox").style.display="none";
+    $("confirmBox").style.display="none";
+    $("separacaoOrdemResumo").innerHTML='<div class="item"><b>Ordem:</b> '+esc(d.pedido.numero)+'<div class="line"><b>Cliente/remessa:</b> '+esc(d.pedido.cliente||"Não informado")+'</div><div class="line"><b>Status:</b> '+esc(d.pedido.status)+'</div><div class="line"><b>Itens pendentes:</b> '+pendentes.length+'</div></div>';
+    renderItensOrdemSeparacao();
+  }catch(e){showMsg($("separacaoOrdemMsg"),e.message||"Não foi possível validar a ordem.",false);}
+}
+function renderItensOrdemSeparacao(){
+  if(!ordemSeparacaoAtual)return;
+  const itens=ordemSeparacaoAtual.itens||[];
+  $("separacaoItensOrdem").innerHTML=itens.map(i=>{
+    const pendente=i.status==="PENDENTE";
+    return '<div class="item"><b>'+esc(i.produto_numero)+' — '+esc(i.nome)+'</b><div class="line">Quantidade solicitada: '+esc(i.quantidade)+' unidade(s)</div><div class="line">Status: '+esc(i.status)+'</div>'+(pendente?'<button onclick="selecionarItemOrdemSeparacao('+Number(i.item_id)+')">Separar este item</button>':'<span class="strong">Item concluído</span>')+'</div>';
+  }).join("");
+}
+function selecionarItemOrdemSeparacao(itemId){
+  if(!ordemSeparacaoAtual)return;
+  const item=ordemSeparacaoAtual.itens.find(i=>Number(i.item_id)===Number(itemId));
+  if(!item||item.status!=="PENDENTE"){showMsg($("separacaoOrdemMsg"),"Este item não está mais pendente. Atualize a ordem.",false);return;}
+  itemOrdemSeparacaoAtual=item;
+  $("produto").value=item.produto_numero;
+  $("quantidade").value=item.quantidade;
+  $("separacaoItemAtual").innerHTML='<div class="item"><b>'+esc(item.produto_numero)+' — '+esc(item.nome)+'</b><div class="line">Separar a quantidade exata da ordem: '+esc(item.quantidade)+' unidade(s)</div></div>';
+  $("separacaoProdutoBox").style.display="block";
+  $("confirmBox").style.display="none";
+  $("resultado").innerHTML="";
+  clearMsg($("confirmMsg"));
+  $("separacaoProdutoBox").scrollIntoView({behavior:"smooth",block:"start"});
+}
+function voltarIdentificacaoOrdem(){
+  ordemSeparacaoAtual=null;itemOrdemSeparacaoAtual=null;currentPreview=null;
+  $("separacaoWorkArea").style.display="none";
+  $("separacaoOrdemGate").style.display="block";
+  $("separacaoProdutoBox").style.display="none";
+  $("confirmBox").style.display="none";
+  $("separacaoItensOrdem").innerHTML="";$("separacaoOrdemResumo").innerHTML="";
+  $("separacaoNumeroOrdem").value="";
+  $("resultado").innerHTML="";
+  clearMsg($("separacaoOrdemMsg"));
+}
+function buscarOrientacao(){
+  $("confirmBox").style.display="none";
+  try{
+    if(!ordemSeparacaoAtual||!itemOrdemSeparacaoAtual)throw Error("Selecione primeiro um item pendente da ordem.");
+    currentPreview=call("previewSeparacao",{numero:$("produto").value.trim(),quantidade:parseInt($("quantidade").value,10)});
+    if(String(currentPreview.produto)!==String(itemOrdemSeparacaoAtual.produto_numero)||Number(currentPreview.quantidade_pedida)!==Number(itemOrdemSeparacaoAtual.quantidade))
+      throw Error("O produto ou a quantidade da orientação não corresponde ao item da ordem.");
+    $("resultado").innerHTML='<div class="item"><b>Produto:</b> '+esc(currentPreview.produto)+' - '+esc(currentPreview.nome)+'<br><b>Solicitado:</b> '+esc(currentPreview.quantidade_pedida)+' unidade(s)</div>';
+    $("confirmItens").innerHTML=currentPreview.orientacoes.map((item,idx)=>'<div class="item"><b>Item '+(idx+1)+'</b><div class="line"><b>Lote:</b> '+esc(item.lote)+'</div><div class="line"><b>Endereço:</b> '+esc(item.endereco)+'</div><span class="strong">Separar: '+esc(item.qtd_operador)+' '+esc(item.unidade_operador)+'</span><label>Digite a quantidade de '+esc(item.unidade_operador)+' que você pegou</label><input class="confirmInput" inputmode="numeric" data-index="'+idx+'"></div>').join("");
+    $("confirmBox").style.display="block";$("confirmar").disabled=false;
+  }catch(e){$("resultado").innerHTML='<div class="msg err">'+esc(e.message)+'</div>';}
+}
+function confirmarSeparacao(){
+  if(!currentPreview||!ordemSeparacaoAtual||!itemOrdemSeparacaoAtual)return;
+  try{
+    const confirmacoes=[...document.querySelectorAll(".confirmInput")].map(i=>({index:parseInt(i.dataset.index,10),quantidade_confirmada:parseInt(i.value,10)}));
+    const data=call("confirmarSeparacao",{token:currentPreview.token,confirmacoes,pedido_id:ordemSeparacaoAtual.pedido.id,pedido_item_id:itemOrdemSeparacaoAtual.item_id});
+    showMsg($("confirmMsg"),data.message,true);$("confirmar").disabled=true;
+    ordemSeparacaoAtual=call("obterPedido",{numero:ordemSeparacaoAtual.pedido.numero});
+    itemOrdemSeparacaoAtual=null;currentPreview=null;
+    $("separacaoProdutoBox").style.display="none";$("confirmBox").style.display="none";$("resultado").innerHTML="";
+    $("separacaoOrdemResumo").innerHTML='<div class="item"><b>Ordem:</b> '+esc(ordemSeparacaoAtual.pedido.numero)+'<div class="line"><b>Cliente/remessa:</b> '+esc(ordemSeparacaoAtual.pedido.cliente||"Não informado")+'</div><div class="line"><b>Status:</b> '+esc(ordemSeparacaoAtual.pedido.status)+'</div><div class="line"><b>Itens pendentes:</b> '+ordemSeparacaoAtual.itens.filter(i=>i.status==="PENDENTE").length+'</div></div>';
+    renderItensOrdemSeparacao();
+  }catch(e){showMsg($("confirmMsg"),e.message,false);}
+}
 function consultarMovimentacoes(){ try{ const data=call("listarMovimentacoes",$("movNumero").value.trim()); renderItems($("movResultado"),data.itens,item=>`<div class="item"><span class="badge">${esc(item.tipo)}</span><div class="line"><b>${esc(item.produto_numero)} - ${esc(item.produto_nome)}</b></div><div class="line"><b>Lote:</b> ${esc(item.lote)}</div><div class="line"><b>Endereço:</b> ${esc(item.endereco)}</div><div class="line"><b>Quantidade:</b> ${esc(item.quantidade)}</div><div class="line"><b>Saldo após:</b> ${esc(item.saldo_apos)}</div><div class="line"><b>Data/hora:</b> ${esc(item.data_hora)}</div></div>`); }catch(e){ $("movResultado").innerHTML=`<div class="msg err">${esc(e.message)}</div>`; } }
 
 
@@ -760,7 +859,7 @@ if($("refreshLanSessions"))$("refreshLanSessions").onclick=loadLanSessions;
 if($("createBackup"))$("createBackup").onclick=createBackup;
 setInterval(()=>{if($("screen-usuarios")?.classList.contains("active")&&activeUser?.role==="admin")loadLanSessions();},10000);
 $("authLogin").onclick=doLogin;$("authPassword").addEventListener("keydown",e=>{if(e.key==="Enter")doLogin();});$("authUsername").addEventListener("keydown",e=>{if(e.key==="Enter")doLogin();});$("setupCreateAdmin").onclick=createInitialAdmin;$("setupPassword").addEventListener("keydown",e=>{if(e.key==="Enter")createInitialAdmin();});$("logoutButton").onclick=doLogout;$("saveUserButton").onclick=saveUser;$("clearUserForm").onclick=clearUserForm;
-$("salvarCadastro").onclick=salvarCadastro; $("consultarProdutos").onclick=consultarProdutos; $("salvarEntrada").onclick=salvarEntrada; $("abrirLotesEntrada").onclick=abrirLotesEntrada; $("salvarEndereco").onclick=salvarEndereco; $("salvarEnderecoDetalhe").onclick=salvarEnderecoDetalhe; $("consultarEnderecos").onclick=()=>consultarEnderecos(false); $("verEnderecosEntrada").onclick=()=>consultarEnderecos(true); $("consultarEstoque").onclick=consultarEstoque; $("buscar").onclick=buscarOrientacao; $("confirmar").onclick=confirmarSeparacao; $("cancelar").onclick=()=>{$("confirmBox").style.display="none";$("resultado").innerHTML="";}; $("consultarMovimentacoes").onclick=consultarMovimentacoes;
+$("salvarCadastro").onclick=salvarCadastro; $("consultarProdutos").onclick=consultarProdutos; $("salvarEntrada").onclick=salvarEntrada; $("abrirLotesEntrada").onclick=abrirLotesEntrada; $("salvarEndereco").onclick=salvarEndereco; $("salvarEnderecoDetalhe").onclick=salvarEnderecoDetalhe; $("consultarEnderecos").onclick=()=>consultarEnderecos(false); $("verEnderecosEntrada").onclick=()=>consultarEnderecos(true); $("consultarEstoque").onclick=consultarEstoque; $("buscar").onclick=buscarOrientacao; $("confirmar").onclick=confirmarSeparacao; $("validarOrdemSeparacao").onclick=validarOrdemSeparacao; $("separacaoNumeroOrdem").addEventListener("keydown",e=>{if(e.key==="Enter")validarOrdemSeparacao();}); $("trocarOrdemSeparacao").onclick=voltarIdentificacaoOrdem; $("cancelar").onclick=()=>{$("confirmBox").style.display="none";$("resultado").innerHTML="";}; $("consultarMovimentacoes").onclick=consultarMovimentacoes;
 $("abrirEnderecosCadastro").onclick=abrirEnderecosCadastro; $("fecharEnderecosCadastro").onclick=()=>$("cadEnderecosPopup").classList.remove("open"); $("fecharLotesEntrada").onclick=()=>$("lotesEntradaPopup").classList.remove("open"); $("fecharEnderecosPopup").onclick=()=>$("enderecosPopup").classList.remove("open"); $("fecharEnderecosEntradaPopup").onclick=()=>$("enderecosEntrada").classList.remove("open");
 ["cadEnderecosPopup","lotesEntradaPopup","enderecosPopup","enderecosEntrada"].forEach(id=>$(id).onclick=e=>{ if(e.target.id===id)$(id).classList.remove("open"); });
 attachDateMask("cadFabricacao"); attachDateMask("cadVencimento");
