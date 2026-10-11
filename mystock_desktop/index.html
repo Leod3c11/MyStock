@@ -201,6 +201,8 @@
     .pedido-lista-geradas{margin-top:22px}
     @media(max-width:520px){.pedido-etapa{padding:14px}.pedido-busca{flex-direction:column}.pedido-busca button{width:100%}.pedido-quantidade{flex-direction:column;align-items:stretch}.pedido-quantidade button{width:100%}.pedido-item-linha{flex-direction:column}.pedido-item-linha button{width:100%}}
 
+
+    .pedido-controls{margin:0 0 16px}.pedido-controls .nav-tabs{margin-bottom:0;padding:3px 0 8px}.pedido-controls .tab-btn{padding:9px 16px;font-size:13px}.pedido-etapa[hidden]{display:none!important}
   </style>
 </head>
 <body>
@@ -449,25 +451,34 @@
   <div id="screen-pedidos" class="screen">
     <div class="screen-title"><button class="back-btn" data-screen="menu">Voltar</button><h2>Gerar ordem de remessa</h2></div>
     <div class="pedido-intro"><strong>Nova ordem de remessa</strong><p>Preencha os dados, adicione os produtos e confira a lista antes de gerar a ordem.</p></div>
-    <section class="pedido-etapa">
+    <div class="dashboard-controls pedido-controls">
+      <div class="nav-tabs" aria-label="Seções de geração de ordem">
+        <button class="tab-btn active" onclick="filtrarSecaoPedido('todos',this)">Todos</button>
+        <button class="tab-btn" onclick="filtrarSecaoPedido('identificacao',this)">Identificação</button>
+        <button class="tab-btn" onclick="filtrarSecaoPedido('produtos',this)">Produtos</button>
+        <button class="tab-btn" onclick="filtrarSecaoPedido('conferencia',this)">Conferência</button>
+        <button class="tab-btn" onclick="filtrarSecaoPedido('ordens',this)">Ordens geradas</button>
+      </div>
+    </div>
+    <section class="pedido-etapa" data-pedido-secao="identificacao">
       <div class="pedido-etapa-titulo"><span class="pedido-numero">1</span><div><h2>Identificação</h2><p>Informe o cliente e uma referência, se necessário.</p></div></div>
       <label for="pedidoClienteSelect">Cliente</label><select id="pedidoClienteSelect"><option value="">Selecione um cliente (opcional)</option></select>
       <div id="pedidoClienteResumo" class="pedido-ajuda"></div>
       <label for="pedidoReferencia">Referência da remessa (opcional)</label><input id="pedidoReferencia" placeholder="Ex.: filial, número externo ou observação">
     </section>
-    <section class="pedido-etapa">
+    <section class="pedido-etapa" data-pedido-secao="produtos">
       <div class="pedido-etapa-titulo"><span class="pedido-numero">2</span><div><h2>Adicionar produtos</h2><p>Pesquise pelo número, nome, QR/código de barras ou lote.</p></div></div>
       <div class="pedido-busca"><input id="pedidoProdutoBusca" autocomplete="off" placeholder="Digite ou leia o código do produto"><button id="pesquisarProdutosPedido" class="secondary">Pesquisar</button></div>
       <div id="pedidoProdutosResultados"></div><div id="pedidoProdutoSelecionado" class="pedido-selecionado" style="display:none"></div>
       <div class="pedido-quantidade"><div><label for="pedidoQuantidade">Quantidade solicitada</label><input id="pedidoQuantidade" inputmode="numeric" placeholder="Quantidade em unidades"></div><button id="adicionarItemPedido">Adicionar à lista</button></div>
     </section>
-    <section class="pedido-etapa">
+    <section class="pedido-etapa" data-pedido-secao="conferencia">
       <div class="pedido-etapa-titulo"><span class="pedido-numero">3</span><div><h2>Conferir e gerar</h2><p>Revise os produtos e as quantidades antes de concluir.</p></div></div>
       <div id="pedidoResumoRascunho" class="pedido-resumo"><div class="pedido-vazio">Nenhum produto adicionado. Pesquise e adicione os produtos acima.</div></div>
       <div class="pedido-total"><span id="pedidoTotalItens">0 produtos</span><strong id="pedidoTotalUnidades">0 unidades</strong></div>
       <button id="gerarPedido" class="pedido-gerar" disabled>Gerar ordem de remessa</button><div id="pedidoMsg" class="msg" role="status"></div>
     </section>
-    <section class="pedido-etapa pedido-lista-geradas">
+    <section class="pedido-etapa pedido-lista-geradas" data-pedido-secao="ordens">
       <div class="pedido-etapa-titulo"><span class="pedido-numero pedido-numero-neutro"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg></span><div><h2>Ordens geradas</h2><p>Consulte ordens já registradas.</p></div></div>
       <div class="pedido-busca"><input id="pedidoFiltro" placeholder="Pesquisar por número da ordem ou cliente"><button id="consultarPedidos" class="secondary">Pesquisar</button></div><div id="pedidosResultado"></div>
     </section>
@@ -958,6 +969,7 @@ function salvarEdicaoProduto(){try{const d=call("editarProduto",{produto_id:Numb
 function salvarCliente(){try{const data=call("salvarCliente",{nome:$("clienteNome").value,documento:$("clienteDocumento").value,telefone:$("clienteTelefone").value,email:$("clienteEmail").value,endereco:$("clienteEndereco").value});showMsg($("clienteMsg"),data.message,true);$("clienteNome").value="";$("clienteDocumento").value="";$("clienteTelefone").value="";$("clienteEmail").value="";$("clienteEndereco").value="";consultarClientes();carregarClientesPedido();}catch(e){showMsg($("clienteMsg"),e.message,false);}}
 function consultarClientes(){try{const d=call("listarClientes",$("clienteFiltro").value.trim());renderItems($("clientesResultado"),d.itens,c=>'<div class="item"><div class="line"><b>'+esc(c.nome)+'</b></div>'+(c.documento?'<div class="line">CPF/CNPJ: '+esc(c.documento)+'</div>':'')+(c.telefone?'<div class="line">Telefone: '+esc(c.telefone)+'</div>':'')+(c.email?'<div class="line">E-mail: '+esc(c.email)+'</div>':'')+(c.endereco?'<div class="line">Endereço: '+esc(c.endereco)+'</div>':'')+'</div>',"Nenhum cliente encontrado.");}catch(e){$("clientesResultado").innerHTML='<div class="msg err">'+esc(e.message)+'</div>';}}
 function carregarClientesPedido(){try{const d=call("listarClientes",""),sel=$("pedidoClienteSelect"),old=sel.value;sel.innerHTML='<option value="">Selecione um cliente (opcional)</option>'+d.itens.map(c=>'<option value="'+c.id+'" data-nome="'+esc(c.nome)+'">'+esc(c.nome)+(c.documento?' — '+esc(c.documento):'')+'</option>').join("");if([...sel.options].some(o=>o.value===old))sel.value=old;$("pedidoClienteResumo").textContent=d.itens.length+" cliente(s) disponível(is).";}catch(e){$("pedidoClienteResumo").textContent=e.message;}}
+function filtrarSecaoPedido(secao,btn){document.querySelectorAll("[data-pedido-secao]").forEach(el=>{el.hidden=secao!=="todos"&&el.dataset.pedidoSecao!==secao;});document.querySelectorAll(".pedido-controls .tab-btn").forEach(b=>b.classList.toggle("active",b===btn));}
 function carregarProdutosPedido(){produtoPedidoSelecionado=null;$("pedidoProdutoSelecionado").style.display="none";$("pedidoProdutoBusca").value="";$("pedidoProdutosResultados").innerHTML="";$("pedidoQuantidade").value="";carregarClientesPedido();}
 function pesquisarProdutosPedido(){const filtro=$("pedidoProdutoBusca").value.trim();if(!filtro){$("pedidoProdutosResultados").innerHTML='<div class="msg">Digite um número, nome ou código para pesquisar.</div>';return;}try{const d=call("listarProdutos",filtro),seen=new Set(),list=[];for(const p of d.itens){if(seen.has(p.produto_id))continue;seen.add(p.produto_id);list.push(p);}renderItems($("pedidoProdutosResultados"),list,p=>'<div class="item"><div class="line"><b>'+esc(p.numero)+' — '+esc(p.nome)+'</b></div>'+(p.codigo_barras?'<div class="line">QR / código: '+esc(p.codigo_barras)+'</div>':'')+'<div class="line">Lotes cadastrados: '+esc(d.itens.filter(x=>x.produto_id===p.produto_id).length)+'</div><div class="line">Saldo total: '+esc(p.saldo_produto??p.saldo_total)+' unidade(s)</div><button class="secondary selecionar-produto-pedido" data-id="'+p.produto_id+'">Selecionar produto</button></div>',"Nenhum produto corresponde à pesquisa.");document.querySelectorAll(".selecionar-produto-pedido").forEach(b=>b.onclick=()=>selecionarProdutoPedido(Number(b.dataset.id),list));}catch(e){$("pedidoProdutosResultados").innerHTML='<div class="msg err">'+esc(e.message)+'</div>';}}
 function selecionarProdutoPedido(id,list){const p=list.find(x=>Number(x.produto_id)===id);if(!p)return;produtoPedidoSelecionado={produto_id:id,numero:p.numero,nome:p.nome,codigo_barras:p.codigo_barras||"",saldo:Number(p.saldo_produto??p.saldo_total)||0};$("pedidoProdutoSelecionado").style.display="block";$("pedidoProdutoSelecionado").innerHTML='<b>Produto selecionado:</b> '+esc(p.numero)+' — '+esc(p.nome)+(p.codigo_barras?'<div class="line">QR / código: '+esc(p.codigo_barras)+'</div>':'')+'<div class="line">Saldo disponível: '+produtoPedidoSelecionado.saldo+' unidade(s)</div>';showMsg($("pedidoMsg"),"Produto selecionado.",true);}
