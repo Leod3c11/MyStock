@@ -78,7 +78,7 @@ class MyStockDatabase {
     const success=data.sucesso===false?0:1;
     const payload=data.detalhes&&typeof data.detalhes==="object"?data.detalhes:{};
     const safe={};
-    const allowed=["numero","codigo_barras","nome","lote","endereco","quantidade","quantidade_entrada","estoque_minimo","produto_id","lote_id","pedido_id","pedido_item_id","cliente","itens","filtro","ativo","capacidade_maxima","quantidade_confirmada"];
+    const allowed=["numero","codigo_barras","nome","lote","endereco","quantidade","quantidade_entrada","estoque_minimo","produto_id","lote_id","pedido_id","pedido_item_id","cliente","itens","filtro","ativo","capacidade_maxima","quantidade_confirmada","erro"];
     for(const key of allowed) if(payload[key]!==undefined){
       const value=payload[key];
       safe[key]=Array.isArray(value)?value.slice(0,30).map(x=>x&&typeof x==="object"?Object.fromEntries(Object.entries(x).filter(([k])=>["produto_id","quantidade","index","quantidade_confirmada"].includes(k))):x):String(value).slice(0,500);
