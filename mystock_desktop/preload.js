@@ -12,6 +12,8 @@ const methods = [
   "listarProdutos",
   "listarEstoqueMinimo",
   "listarMovimentacoes",
+  "listarAuditoriaOperadores",
+  "listarAuditoria",
   "previewSeparacao",
   "confirmarSeparacao"
 ];
