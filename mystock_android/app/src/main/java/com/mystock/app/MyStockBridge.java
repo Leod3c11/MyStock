@@ -22,6 +22,10 @@ public class MyStockBridge {
     private static final int SERVER_PORT = 8765;
     private static final int DISCOVERY_PORT = 8766;
     private final SharedPreferences prefs;
+    private volatile boolean connected = false;
+    private volatile boolean heartbeatInFlight = false;
+    private volatile long lastSuccessfulContact = 0L;
+    private volatile long lastHeartbeatStart = 0L;
 
     public MyStockBridge(Context context) {
         prefs = context.getSharedPreferences("mystock_lan_session", Context.MODE_PRIVATE);
@@ -65,7 +69,7 @@ public class MyStockBridge {
         }
         connection.disconnect();
         JSONObject result = new JSONObject(response.length() == 0 ? "{}" : response.toString());
-        if (status == 401) prefs.edit().remove("token").apply();
+        if (status == 401) { prefs.edit().remove("token").apply(); connected = false; lastSuccessfulContact = 0L; }
         return result;
     }
 
@@ -171,6 +175,8 @@ public class MyStockBridge {
             }
             if (result.optBoolean("ok")) {
                 prefs.edit().putString("token", result.optString("token", "")).apply();
+                connected = true;
+                lastSuccessfulContact = System.currentTimeMillis();
             }
             return result.toString();
         } catch (Exception e) {
@@ -189,7 +195,62 @@ public class MyStockBridge {
             }
         } catch (Exception ignored) {}
         prefs.edit().remove("token").apply();
+        connected = false;
+        lastSuccessfulContact = 0L;
         return "{\"ok\":true}";
+    }
+
+    @JavascriptInterface
+    public String statusConexao() {
+        long now = System.currentTimeMillis();
+        boolean hasToken = !prefs.getString("token", "").isEmpty();
+        boolean isConnected = hasToken && connected && now - lastSuccessfulContact <= 45000L;
+        try {
+            JSONObject out = new JSONObject();
+            out.put("ok", true);
+            out.put("connected", isConnected);
+            out.put("authenticated", hasToken);
+            return out.toString();
+        } catch (Exception ignored) {
+            return "{\"ok\":true,\"connected\":false,\"authenticated\":false}";
+        }
+    }
+
+    // A chamada HTTP roda em segundo plano para não congelar a interface do celular.
+    @JavascriptInterface
+    public String heartbeatRemoto() {
+        final long now = System.currentTimeMillis();
+        final String token = prefs.getString("token", "");
+        if (token.isEmpty()) {
+            connected = false;
+            return statusConexao();
+        }
+        if (!heartbeatInFlight && now - lastHeartbeatStart >= 10000L) {
+            synchronized (this) {
+                if (!heartbeatInFlight && now - lastHeartbeatStart >= 10000L) {
+                    heartbeatInFlight = true;
+                    lastHeartbeatStart = now;
+                    new Thread(() -> {
+                        try {
+                            JSONObject body = new JSONObject();
+                            body.put("token", token);
+                            JSONObject response = request("/api/heartbeat", body);
+                            if (response.optBoolean("ok") && token.equals(prefs.getString("token", ""))) {
+                                connected = true;
+                                lastSuccessfulContact = System.currentTimeMillis();
+                            } else {
+                                connected = false;
+                            }
+                        } catch (Exception ignored) {
+                            if (System.currentTimeMillis() - lastSuccessfulContact > 45000L) connected = false;
+                        } finally {
+                            heartbeatInFlight = false;
+                        }
+                    }, "MyStock-Heartbeat").start();
+                }
+            }
+        }
+        return statusConexao();
     }
 
     private String call(String method, String payload) {
