@@ -11,6 +11,7 @@ const lanSessions = new Map();
 const loginFailures = new Map();
 const LOGIN_WINDOW_MS = 15 * 60 * 1000;
 const LOGIN_MAX_FAILURES = 5;
+const SESSION_IDLE_TIMEOUT_MS = 30 * 60 * 1000;
 let lanServer = null;
 let discoverySocket = null;
 
@@ -130,6 +131,10 @@ function startLanServer(db) {
       if (Date.now() - sessionData.createdAt > 12 * 60 * 60 * 1000) {
         lanSessions.delete(String(body.token || ""));
         return send(res, 401, {ok:false,error:"Sessão expirada. Entre novamente."});
+      }
+      if (Date.now() - Number(sessionData.lastActivity || sessionData.createdAt) > SESSION_IDLE_TIMEOUT_MS) {
+        lanSessions.delete(tokenValue);
+        return send(res, 401, {ok:false,error:"Sessão encerrada por 30 minutos de inatividade. Entre novamente."});
       }
       const user = db.getUserById(sessionData.userId);
       if (!user || !user.ativo) {
@@ -352,6 +357,7 @@ app.whenReady().then(() => {
         try{
           if(!publicMethods.has(name)){
             if(!currentUser)throw new Error("Faça login para continuar.");
+             if(Date.now()-currentUserLastActivity>SESSION_IDLE_TIMEOUT_MS){currentUser=null;currentUserLastActivity=0;throw new Error("Sessão encerrada por 30 minutos de inatividade. Entre novamente.");}
             const fresh=database.getUserById(currentUser.id);
             if(!fresh||!fresh.ativo){currentUser=null;throw new Error("Sua conta foi desativada. Faça login com uma conta ativa.");}
             currentUser=fresh;
