@@ -726,7 +726,7 @@ function consultarAuditoria(){
     $("auditSummary").textContent=items.length+" registro(s) encontrado(s). Exibindo até 1.000 atividades mais recentes.";
     renderItems($("auditResultado"),items,item=>{
       let details=item.detalhes||{}, parts=[];
-      const fieldLabels={numero:"Produto",codigo_barras:"Código de barras",nome:"Nome",lote:"Lote",endereco:"Endereço",quantidade:"Quantidade",quantidade_entrada:"Quantidade de entrada",estoque_minimo:"Estoque mínimo",cliente:"Cliente",capacidade_maxima:"Capacidade",filtro:"Busca"};
+      const fieldLabels={numero:"Produto",codigo_barras:"Código de barras",nome:"Nome",lote:"Lote",endereco:"Endereço",quantidade:"Quantidade",quantidade_entrada:"Quantidade de entrada",estoque_minimo:"Estoque mínimo",cliente:"Cliente",capacidade_maxima:"Capacidade",filtro:"Busca",erro:"Motivo da falha"};
       for(const [key,label] of Object.entries(fieldLabels))if(details[key]!==undefined&&details[key]!==null&&String(details[key])!=="")parts.push('<span><b>'+label+':</b> '+esc(details[key])+'</span>');
       if(Array.isArray(details.itens))parts.push('<span><b>Itens do pedido:</b> '+details.itens.length+'</span>');
       return '<div class="item"><div class="line"><b>'+esc(auditActionLabels[item.acao]||item.acao)+'</b> <span class="badge">'+(item.sucesso?'Concluída':'Falhou')+'</span></div><div class="line"><b>Data/hora:</b> '+esc(new Date(item.data_hora).toLocaleString("pt-BR"))+'</div><div class="line"><b>Dispositivo:</b> '+esc(item.dispositivo)+' · <b>IP:</b> '+esc(item.endereco_ip||"—")+'</div>'+(parts.length?'<div class="line">'+parts.join(' · ')+'</div>':'')+'</div>';
