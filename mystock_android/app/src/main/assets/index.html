@@ -663,7 +663,7 @@ function carregarTarefasMovimentacao(){
       if(!tarefa)return;
       tarefaMovPendente={id,quantidade};
       $("taskModalTitle").textContent="Concluir tarefa #"+id+"?";
-      $("taskModalText").textContent="Produto: "+tarefa.produto_numero+" — "+tarefa.produto_nome+"\nLote: "+tarefa.lote+"\nTransferência: "+tarefa.origem+" → "+tarefa.destino+"\nQuantidade: "+quantidade+" unidade(s)+"+"\n\nO saldo será atualizado ao confirmar.";
+      $("taskModalText").textContent="Produto: "+tarefa.produto_numero+" — "+tarefa.produto_nome+"\nLote: "+tarefa.lote+"\nTransferência: "+tarefa.origem+" → "+tarefa.destino+"\nQuantidade: "+quantidade+" unidade(s)\n\nO saldo será atualizado ao confirmar.";
       $("taskModalError").style.display="none";$("taskModalConfirm").style.display="";$("taskModalConfirm").disabled=false;$("taskModalCancel").textContent="Cancelar";$("taskModal").classList.add("open");
     });
   }catch(e){$("tarefasMovimentacaoResultado").innerHTML='<div class="msg err">'+esc(e.message)+'</div>';}
