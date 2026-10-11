@@ -58,15 +58,27 @@ function startLanServer(db) {
       if (req.url === "/api/login") {
         const result = db.loginUser(body);
         const token = crypto.randomBytes(32).toString("hex");
-        lanSessions.set(token, { userId: result.user.id, createdAt: Date.now() });
+        if (!result || !result.ok || !result.user) return send(res, 401, result || {ok:false,error:"Login inválido."});
+        const now = Date.now();
+        lanSessions.set(token, {
+          userId: result.user.id,
+          nome: result.user.nome,
+          username: result.user.username,
+          role: result.user.role,
+          ip: req.socket.remoteAddress || "",
+          createdAt: now,
+          lastSeen: now,
+          lastActivity: now
+        });
         return send(res, 200, {...result, token});
       }
       if (req.url === "/api/logout") {
         lanSessions.delete(String(body.token || ""));
         return send(res, 200, {ok:true});
       }
-      if (req.url !== "/api/call") return send(res, 404, {ok:false,error:"Rota não encontrada."});
-      const sessionData = lanSessions.get(String(body.token || ""));
+      if (req.url !== "/api/call" && req.url !== "/api/heartbeat") return send(res, 404, {ok:false,error:"Rota não encontrada."});
+      const tokenValue = String(body.token || "");
+      const sessionData = lanSessions.get(tokenValue);
       if (!sessionData) return send(res, 401, {ok:false,error:"Sessão encerrada. Entre novamente."});
       if (Date.now() - sessionData.createdAt > 12 * 60 * 60 * 1000) {
         lanSessions.delete(String(body.token || ""));
@@ -74,9 +86,16 @@ function startLanServer(db) {
       }
       const user = db.getUserById(sessionData.userId);
       if (!user || !user.ativo) {
-        lanSessions.delete(String(body.token || ""));
+        lanSessions.delete(tokenValue);
         return send(res, 401, {ok:false,error:"Conta desativada. Entre novamente com uma conta ativa."});
       }
+      sessionData.lastSeen = Date.now();
+      sessionData.nome = user.nome;
+      sessionData.username = user.username;
+      sessionData.role = user.role;
+      sessionData.ip = req.socket.remoteAddress || sessionData.ip;
+      if (req.url === "/api/heartbeat") return send(res, 200, {ok:true,serverTime:Date.now()});
+      sessionData.lastActivity = Date.now();
       const name = String(body.method || "");
       const method = methods[name];
       if (!method) return send(res, 400, {ok:false,error:"Operação desconhecida."});
@@ -123,6 +142,30 @@ function startLanServer(db) {
     discoverySocket = null;
   }
   return server;
+}
+
+function getLanSessions() {
+  const now = Date.now();
+  const sessions = [];
+  for (const [token, sessionData] of lanSessions.entries()) {
+    const user = database ? database.getUserById(sessionData.userId) : null;
+    if (!user || !user.ativo || now - sessionData.createdAt > 12 * 60 * 60 * 1000) {
+      lanSessions.delete(token);
+      continue;
+    }
+    sessions.push({
+      nome: user.nome,
+      username: user.username,
+      role: user.role,
+      ip: String(sessionData.ip || "").replace(/^::ffff:/, ""),
+      connected: now - sessionData.lastSeen <= 45000,
+      active: now - sessionData.lastActivity <= 5 * 60 * 1000,
+      lastSeen: sessionData.lastSeen,
+      lastActivity: sessionData.lastActivity,
+      connectedFor: Math.max(0, now - sessionData.createdAt)
+    });
+  }
+  return {ok:true,itens:sessions.sort((a,b)=>Number(b.connected)-Number(a.connected)||b.lastSeen-a.lastSeen)};
 }
 
 function getLanIPv4Addresses() {
@@ -188,6 +231,7 @@ app.whenReady().then(() => {
     const methods = {
       statusAuth: () => database.authStatus(),
       enderecoLan: () => ({ok:true,port:LAN_PORT,ips:getLanIPv4Addresses()}),
+      listarSessoesLan: () => getLanSessions(),
       criarAdminInicial: value => database.createInitialAdmin(JSON.parse(value || "{}")),
       login: value => { const result=database.loginUser(JSON.parse(value||"{}")); if(result.ok)currentUser=result.user; return result; },
       logout: () => { currentUser=null; return {ok:true}; },
@@ -206,7 +250,7 @@ app.whenReady().then(() => {
       confirmarSeparacao: value => database.confirmSeparation(JSON.parse(value || "{}"))
     };
     const permissionByMethod={salvarProduto:"cadastro",listarProdutos:"produtos",registrarEntrada:"entrada",listarLotes:"entrada",salvarEndereco:"enderecos",listarEnderecos:"enderecos",consultarEstoque:"consulta_estoque",previewSeparacao:"separacao",confirmarSeparacao:"separacao",listarMovimentacoes:"movimentacoes"};
-    const adminOnly=new Set(["listarUsuarios","salvarUsuario","alternarUsuario"]);
+    const adminOnly=new Set(["listarUsuarios","salvarUsuario","alternarUsuario","listarSessoesLan"]);
     const publicMethods=new Set(["statusAuth","criarAdminInicial","login","logout","enderecoLan"]);
     for(const [name,fn] of Object.entries(methods)){
       ipcMain.on("mystock:"+name,(event,payload)=>{
