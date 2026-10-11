@@ -167,8 +167,9 @@
     <div class="brand"><div class="brand-logo">MS</div><h1>MyStock</h1></div>
     <h2 style="margin-top:22px">Entrar no sistema</h2>
     <p>Conecte ao computador que está executando o MyStock. O celular e o PC precisam estar na mesma rede Wi-Fi.</p>
-    <label for="serverAddress">Endereço do computador</label>
-    <input id="serverAddress" autocomplete="url" placeholder="http://192.168.1.10:8765">
+    <label for="serverAddress">Computador na rede</label>
+    <input id="serverAddress" autocomplete="url" placeholder="Procurando computador automaticamente...">
+    <button id="discoverServerButton" class="secondary" type="button">Encontrar computador automaticamente</button>
     <label for="loginUsername">Usuário</label>
     <input id="loginUsername" autocomplete="username" autocapitalize="none" placeholder="Seu usuário">
     <label for="loginPassword">Senha</label>
@@ -633,15 +634,35 @@ $("startScannerEntrada").onclick=()=>scan($("readerEntrada"),$("entNumero"),$("s
 $("startScannerEstoque").onclick=()=>scan($("readerEstoque"),$("estNumero"),$("scanEstoqueMsg"),s=>scannerEstoque=s,$("startScannerEstoque"),consultarEstoque);
 $("startScanner").onclick=()=>scan($("reader"),$("produto"),$("scanMsg"),s=>scanner=s,$("startScanner"));
 
+function descobrirServidorAndroid(exibirMensagem=true) {
+  const btn=$("discoverServerButton");
+  if(btn) { btn.disabled=true; btn.textContent="Procurando..."; }
+  try {
+    const result=JSON.parse(window.MyStock.descobrirServidor());
+    if(!result.ok || !result.serverUrl) throw new Error(result.error||"Computador não encontrado.");
+    $("serverAddress").value=result.serverUrl;
+    if(exibirMensagem) mensagemLogin("Computador encontrado automaticamente.",true);
+    return true;
+  } catch(e) {
+    if(exibirMensagem) mensagemLogin(e.message||"Não foi possível localizar o computador.");
+    return false;
+  } finally {
+    if(btn) { btn.disabled=false; btn.textContent="Encontrar computador automaticamente"; }
+  }
+}
+
 window.addEventListener("DOMContentLoaded", () => {
   try {
     const saved=JSON.parse(window.MyStock.servidorSalvo());
     if(saved.serverUrl) $("serverAddress").value=saved.serverUrl;
   } catch(e) {}
+  $("discoverServerButton").onclick=()=>descobrirServidorAndroid(true);
   $("loginButton").onclick=entrarAndroid;
   $("loginPassword").addEventListener("keydown",e=>{if(e.key==="Enter")entrarAndroid();});
   $("loginUsername").addEventListener("keydown",e=>{if(e.key==="Enter")entrarAndroid();});
   $("logoutAndroid").onclick=sairAndroid;
+  // Atualiza o endereço salvo se o PC recebeu um novo IP na rede.
+  descobrirServidorAndroid(false);
 });
 </script>
 </body>
