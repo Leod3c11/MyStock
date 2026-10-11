@@ -26,6 +26,8 @@ function startLanServer(db) {
     listarProdutos: value => db.listProducts(String(value || "")),
     listarEstoqueMinimo: () => db.listLowStock(),
     listarMovimentacoes: value => db.listMovements(String(value || "")),
+    listarAuditoriaOperadores: () => db.listAuditOperators(),
+    listarAuditoria: value => db.listAudit(JSON.parse(value || "{}")),
     previewSeparacao: value => db.previewSeparation(JSON.parse(value || "{}")),
     confirmarSeparacao: value => db.confirmSeparation(JSON.parse(value || "{}"))
   };
@@ -104,6 +106,8 @@ function startLanServer(db) {
       const name = String(body.method || "");
       const method = methods[name];
       if (!method) return send(res, 400, {ok:false,error:"Operação desconhecida."});
+      if ((name==="listarAuditoriaOperadores"||name==="listarAuditoria") && user.role!=="admin")
+        return send(res,403,{ok:false,error:"Apenas o administrador pode consultar a auditoria dos operadores."});
       const permission = permissionByMethod[name];
       if (permission && user.role !== "admin" && user.permissoes?.[permission] !== true)
         return send(res, 403, {ok:false,error:"Seu usuário não tem permissão para esta operação."});
@@ -111,6 +115,9 @@ function startLanServer(db) {
       if (typeof payload !== "string") payload = JSON.stringify(payload);
       try { payload = JSON.parse(payload); } catch {}
       const result = method(typeof payload === "object" && payload !== null ? JSON.stringify(payload) : String(payload));
+      if(user.role==="operador" && result && result.ok && !["listarAuditoria","listarAuditoriaOperadores"].includes(name)){
+        try{db.recordAudit({usuario_id:user.id,operador_nome:user.nome,operador_username:user.username,dispositivo:"Android",endereco_ip:sessionData.ip,acao:name,detalhes:typeof payload==="object"&&payload!==null?payload:{filtro:String(payload||"")}});}catch{}
+      }
       return send(res, 200, result);
     } catch (error) {
       return send(res, 400, {ok:false,error:error && error.message ? error.message : "Falha interna."});
@@ -267,11 +274,13 @@ app.whenReady().then(() => {
       listarProdutos: value => database.listProducts(String(value || "")),
       listarEstoqueMinimo: () => database.listLowStock(),
       listarMovimentacoes: value => database.listMovements(String(value || "")),
+      listarAuditoriaOperadores: () => database.listAuditOperators(),
+      listarAuditoria: value => database.listAudit(JSON.parse(value || "{}")),
       previewSeparacao: value => database.previewSeparation(JSON.parse(value || "{}")),
       confirmarSeparacao: value => database.confirmSeparation(JSON.parse(value || "{}"))
     };
     const permissionByMethod={salvarProduto:"cadastro",editarProduto:"cadastro",listarProdutos:"produtos",listarEstoqueMinimo:"produtos",criarPedido:"separacao",listarPedidos:"separacao",obterPedido:"separacao",registrarEntrada:"entrada",listarLotes:"entrada",salvarEndereco:"enderecos",listarEnderecos:"enderecos",consultarEstoque:"consulta_estoque",previewSeparacao:"separacao",confirmarSeparacao:"separacao",listarMovimentacoes:"movimentacoes"};
-    const adminOnly=new Set(["listarUsuarios","salvarUsuario","alternarUsuario","listarSessoesLan"]);
+    const adminOnly=new Set(["listarUsuarios","salvarUsuario","alternarUsuario","listarSessoesLan","listarAuditoriaOperadores","listarAuditoria"]);
     const publicMethods=new Set(["statusAuth","criarAdminInicial","login","logout","enderecoLan"]);
     for(const [name,fn] of Object.entries(methods)){
       ipcMain.on("mystock:"+name,(event,payload)=>{
@@ -286,7 +295,13 @@ app.whenReady().then(() => {
             const permission=permissionByMethod[name];
             if(permission&&currentUser.role!=="admin"&&currentUser.permissoes?.[permission]!==true)throw new Error("Seu usuário não tem permissão para esta operação.");
           }
-          event.returnValue=JSON.stringify(fn(payload));
+          const result=fn(payload);
+          const auditedMethods=new Set(["salvarProduto","editarProduto","criarPedido","listarPedidos","obterPedido","salvarEndereco","listarEnderecos","registrarEntrada","consultarEstoque","listarLotes","listarProdutos","listarEstoqueMinimo","listarMovimentacoes","previewSeparacao","confirmarSeparacao"]);
+          if(currentUser?.role==="operador"&&auditedMethods.has(name)&&result?.ok){
+            let details={};try{details=typeof payload==="string"?JSON.parse(payload||"{}"):payload||{};}catch{details={filtro:String(payload||"")};}
+            try{database.recordAudit({usuario_id:currentUser.id,operador_nome:currentUser.nome,operador_username:currentUser.username,dispositivo:"Windows",endereco_ip:"Este computador",acao:name,detalhes:details});}catch{}
+          }
+          event.returnValue=JSON.stringify(result);
         }catch(error){event.returnValue=JSON.stringify({ok:false,error:error&&error.message?error.message:"Falha interna."});}
       });
     }
