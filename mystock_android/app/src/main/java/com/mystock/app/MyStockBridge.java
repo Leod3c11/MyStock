@@ -26,6 +26,9 @@ public class MyStockBridge {
     private volatile boolean heartbeatInFlight = false;
     private volatile long lastSuccessfulContact = 0L;
     private volatile long lastHeartbeatStart = 0L;
+    private volatile boolean discoveryInFlight = false;
+    private volatile boolean discoveryFound = false;
+    private volatile String discoveryError = "";
 
     public MyStockBridge(Context context) {
         prefs = context.getSharedPreferences("mystock_lan_session", Context.MODE_PRIVATE);
@@ -144,6 +147,45 @@ public class MyStockBridge {
     }
 
     @JavascriptInterface
+    public String iniciarDescobertaServidor() {
+        if (serverUrl().isEmpty() && !discoveryInFlight) {
+            synchronized (this) {
+                if (serverUrl().isEmpty() && !discoveryInFlight) {
+                    discoveryInFlight = true;
+                    discoveryFound = false;
+                    discoveryError = "";
+                    new Thread(() -> {
+                        try {
+                            discoverServer();
+                            discoveryFound = true;
+                        } catch (Exception e) {
+                            discoveryError = e.getMessage() == null ? "Computador não encontrado." : e.getMessage();
+                        } finally {
+                            discoveryInFlight = false;
+                        }
+                    }, "MyStock-Discovery").start();
+                }
+            }
+        }
+        return statusServidorDescoberto();
+    }
+
+    @JavascriptInterface
+    public String statusServidorDescoberto() {
+        try {
+            JSONObject out = new JSONObject();
+            out.put("ok", true);
+            out.put("serverUrl", serverUrl());
+            out.put("searching", discoveryInFlight);
+            out.put("found", discoveryFound || !serverUrl().isEmpty());
+            out.put("error", discoveryError);
+            return out.toString();
+        } catch (Exception ignored) {
+            return "{\"ok\":false,\"searching\":false,\"found\":false}";
+        }
+    }
+
+    @JavascriptInterface
     public String servidorSalvo() {
         try {
             JSONObject out = new JSONObject();
@@ -243,6 +285,18 @@ public class MyStockBridge {
                             }
                         } catch (Exception ignored) {
                             if (System.currentTimeMillis() - lastSuccessfulContact > 45000L) connected = false;
+                            try {
+                                discoverServer();
+                                JSONObject retryBody = new JSONObject();
+                                retryBody.put("token", token);
+                                JSONObject retry = request("/api/heartbeat", retryBody);
+                                if (retry.optBoolean("ok") && token.equals(prefs.getString("token", ""))) {
+                                    connected = true;
+                                    lastSuccessfulContact = System.currentTimeMillis();
+                                }
+                            } catch (Exception ignoredAgain) {
+                                if (System.currentTimeMillis() - lastSuccessfulContact > 45000L) connected = false;
+                            }
                         } finally {
                             heartbeatInFlight = false;
                         }
