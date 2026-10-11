@@ -243,6 +243,22 @@ class MyStockDatabase {
         ativo INTEGER NOT NULL DEFAULT 1,
         criado_em TEXT NOT NULL
       );
+      CREATE TABLE IF NOT EXISTS pedidos (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        numero TEXT NOT NULL UNIQUE,
+        cliente TEXT NOT NULL DEFAULT '',
+        status TEXT NOT NULL DEFAULT 'PENDENTE',
+        criado_em TEXT NOT NULL,
+        criado_por TEXT NOT NULL DEFAULT ''
+      );
+      CREATE TABLE IF NOT EXISTS pedido_itens (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        pedido_id INTEGER NOT NULL REFERENCES pedidos(id) ON DELETE CASCADE,
+        produto_id INTEGER NOT NULL REFERENCES produtos(id),
+        quantidade INTEGER NOT NULL CHECK(quantidade > 0),
+        status TEXT NOT NULL DEFAULT 'PENDENTE',
+        UNIQUE(pedido_id, produto_id)
+      );
     `);
   }
 
@@ -384,7 +400,7 @@ class MyStockDatabase {
   }
 
   listStock(filtro) {
-    let sql = `SELECT p.numero, p.codigo_barras, p.nome, l.lote, l.unidades_por_caixa,
+    let sql = `SELECT p.id AS produto_id, l.id AS lote_id, p.numero, p.codigo_barras, p.nome, l.lote, l.unidades_por_caixa,
       l.fabricacao, l.vencimento, en.codigo AS endereco, e.quantidade
       FROM estoque e JOIN lotes l ON l.id = e.lote_id
       JOIN produtos p ON p.id = l.produto_id JOIN enderecos en ON en.id = e.endereco_id`;
@@ -402,6 +418,61 @@ class MyStockDatabase {
       FROM lotes l JOIN produtos p ON p.id = l.produto_id
       WHERE p.numero = ? OR p.codigo_barras = ?
       ORDER BY substr(l.vencimento, 7, 4) || '-' || substr(l.vencimento, 4, 2) || '-' || substr(l.vencimento, 1, 2), l.lote`, [filtro, filtro]) });
+  }
+
+  editProduct(data) {
+    const produtoId=Number(data.produto_id), loteId=Number(data.lote_id);
+    const numero=String(data.numero||"").trim(), codigo=String(data.codigo_barras||"").trim();
+    const nome=String(data.nome||"").trim(), lote=String(data.lote||"").trim();
+    const qc=Number.parseInt(data.unidades_por_caixa,10)||0;
+    const fabricacao=this.normalizeDate(data.fabricacao), vencimento=this.normalizeDate(data.vencimento);
+    if(!produtoId||!loteId||!numero||!nome||!lote) this.fail("Confira o produto, lote, número e nome.");
+    if(qc<=0) this.fail("Unidades por caixa precisa ser maior que zero.");
+    if(!this.db.prepare("SELECT id FROM lotes WHERE id=? AND produto_id=?").get(loteId,produtoId)) this.fail("Produto ou lote não encontrado. Atualize a consulta.");
+    try {
+      this.db.transaction(()=>{
+        this.db.prepare("UPDATE produtos SET numero=?,codigo_barras=?,nome=? WHERE id=?").run(numero,codigo||null,nome,produtoId);
+        this.db.prepare("UPDATE lotes SET lote=?,unidades_por_caixa=?,fabricacao=?,vencimento=? WHERE id=?").run(lote,qc,fabricacao,vencimento,loteId);
+      })();
+    } catch(error) {
+      if(String(error.message||"").includes("UNIQUE")) this.fail("Número, código de barras ou lote já cadastrado em outro registro.");
+      throw error;
+    }
+    return this.ok({message:"Produto e lote atualizados. O saldo de estoque foi preservado."});
+  }
+
+  createOrder(data) {
+    const cliente=String(data.cliente||"").trim(), criadoPor=String(data.criado_por||"").trim();
+    const items=Array.isArray(data.itens)?data.itens:[];
+    if(!items.length) this.fail("Adicione pelo menos um produto ao pedido.");
+    const unique=new Map();
+    for(const item of items){const pid=Number(item.produto_id),qty=Number.parseInt(item.quantidade,10)||0;if(!pid||qty<=0)this.fail("Cada item precisa de produto e quantidade maior que zero.");unique.set(pid,(unique.get(pid)||0)+qty);}
+    const prefix="ORD-"+new Date().toISOString().slice(0,10).replace(/-/g,"")+"-";
+    const numero=this.db.transaction(()=>{
+      let seq=this.db.prepare("SELECT COUNT(*) AS n FROM pedidos WHERE numero LIKE ?").get(prefix+"%").n+1;
+      let orderNo=prefix+String(seq).padStart(4,"0");
+      while(this.db.prepare("SELECT 1 FROM pedidos WHERE numero=?").get(orderNo)){seq++;orderNo=prefix+String(seq).padStart(4,"0");}
+      const result=this.db.prepare("INSERT INTO pedidos(numero,cliente,status,criado_em,criado_por) VALUES(?,?,'PENDENTE',?,?)").run(orderNo,cliente,this.now(),criadoPor);
+      const insert=this.db.prepare("INSERT INTO pedido_itens(pedido_id,produto_id,quantidade,status) VALUES(?,?,?,'PENDENTE')");
+      for(const [pid,qty] of unique){if(!this.db.prepare("SELECT id FROM produtos WHERE id=?").get(pid))this.fail("Um dos produtos selecionados não existe mais.");insert.run(result.lastInsertRowid,pid,qty);}
+      return orderNo;
+    })();
+    return this.ok({numero,message:"Pedido criado. Número da ordem: "+numero});
+  }
+
+  listOrders(filtro) {
+    const value=String(filtro||"").trim(),params=[];
+    let sql=`SELECT p.id,p.numero,p.cliente,p.status,p.criado_em,p.criado_por,COUNT(i.id) AS total_itens,COALESCE(SUM(i.quantidade),0) AS total_unidades FROM pedidos p LEFT JOIN pedido_itens i ON i.pedido_id=p.id`;
+    if(value){sql+=" WHERE p.numero LIKE ? OR p.cliente LIKE ?";params.push("%"+value+"%","%"+value+"%");}
+    sql+=" GROUP BY p.id ORDER BY p.id DESC LIMIT 100";
+    return this.ok({itens:this.rows(sql,params)});
+  }
+
+  getOrder(numero) {
+    const pedido=this.db.prepare("SELECT id,numero,cliente,status,criado_em,criado_por FROM pedidos WHERE numero=?").get(String(numero||"").trim().toUpperCase());
+    if(!pedido)this.fail("Ordem não encontrada. Confira o número com o responsável.");
+    const itens=this.rows(`SELECT i.id AS item_id,i.produto_id,p.numero AS produto_numero,p.codigo_barras,p.nome,i.quantidade,i.status FROM pedido_itens i JOIN produtos p ON p.id=i.produto_id WHERE i.pedido_id=? ORDER BY i.id`,[pedido.id]);
+    return this.ok({pedido,itens});
   }
 
   listProducts(filtro) {
@@ -476,6 +547,9 @@ class MyStockDatabase {
       if (!Number.isFinite(confirmado) || esperado !== confirmado)
         this.fail("Quantidade confirmada diferente da orientação. Estoque não alterado.");
     }
+    const orderId=Number(data.pedido_id)||0, orderItemId=Number(data.pedido_item_id)||0;
+    if(orderItemId&&!orderId)this.fail("Ordem inválida. Acesse o pedido novamente.");
+    if(orderItemId){const oi=this.db.prepare("SELECT id,pedido_id,status FROM pedido_itens WHERE id=?").get(orderItemId);if(!oi||oi.pedido_id!==orderId||oi.status!=="PENDENTE")this.fail("Este item da ordem já foi atendido ou não pertence a ela.");}
     const tx = this.db.transaction(() => {
       for (const item of orientacoes) {
         const atualRow = this.db.prepare("SELECT quantidade FROM estoque WHERE id = ?").get(item.estoque_id);
@@ -486,6 +560,7 @@ class MyStockDatabase {
         this.db.prepare("UPDATE estoque SET quantidade = ? WHERE id = ?").run(novoSaldo, item.estoque_id);
         this.addMovement("SAIDA", item.produto, item.nome, item.lote, item.endereco, item.quantidade_baixa, novoSaldo);
       }
+      if(orderItemId){this.db.prepare("UPDATE pedido_itens SET status='CONCLUIDO' WHERE id=? AND status='PENDENTE'").run(orderItemId);const pending=this.db.prepare("SELECT COUNT(*) AS n FROM pedido_itens WHERE pedido_id=? AND status='PENDENTE'").get(orderId).n;this.db.prepare("UPDATE pedidos SET status=? WHERE id=?").run(pending?"EM_ANDAMENTO":"CONCLUIDO",orderId);}
     });
     tx();
     return this.ok({ message: "Separação confirmada e estoque atualizado." });
