@@ -391,6 +391,14 @@
         <label class="permission-option"><input type="checkbox" data-perm="movimentacoes"> Ver movimentações</label>
       </div><button id="saveUserButton">Salvar usuário</button><button id="clearUserForm" class="secondary">Limpar formulário</button><div id="usrMsg" class="msg"></div>
     </section><section><h2>Contas cadastradas</h2><div id="usersList"></div></section>
+    <section>
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap">
+        <div><h2 style="margin-bottom:4px">Dispositivos conectados</h2><div class="line">Sessões do Android e atividade recente</div></div>
+        <button id="refreshLanSessions" class="secondary" style="width:auto;margin:0">Atualizar</button>
+      </div>
+      <div id="lanSessionsSummary" class="line" style="margin-top:12px">Carregando sessões...</div>
+      <div id="lanSessionsList"></div>
+    </section>
   </div>
 </main>
 
@@ -516,7 +524,7 @@ function showScreen(name){
   const screenPermission={cadastro:"cadastro",produtos:"produtos",entrada:"entrada",enderecos:"enderecos","endereco-detalhe":"enderecos",estoque:"consulta_estoque",separacao:"separacao",movimentacoes:"movimentacoes"};
   if(activeUser&&activeUser.role!=="admin"&&screenPermission[name]&&activeUser.permissoes?.[screenPermission[name]]!==true){alert("Seu usuário não tem permissão para acessar esta tela.");return;}
   if(name==="usuarios"&&activeUser?.role!=="admin"){alert("Apenas o administrador pode gerenciar usuários.");return;}
-  if(name==="usuarios")loadUsers();
+  if(name==="usuarios"){loadUsers();loadLanSessions();}
   if(name==="menu") {
     limparTelaOperacional();
     atualizarDashboardKPIs();
@@ -611,11 +619,40 @@ function createInitialAdmin(){showAuthError("");try{call("criarAdminInicial",{no
 function doLogout(){try{call("logout");}catch(e){}activeUser=null;document.querySelectorAll(".screen").forEach(el=>el.classList.remove("active"));initializeAuth();}
 function clearUserForm(){$("usrId").value="";$("usrNome").value="";$("usrUsername").value="";$("usrPassword").value="";$("userFormTitle").textContent="Cadastrar operador";$("saveUserButton").textContent="Salvar usuário";document.querySelectorAll("[data-perm]").forEach(el=>el.checked=false);clearMsg($("usrMsg"));}
 function loadUsers(){try{const data=call("listarUsuarios");renderItems($("usersList"),data.itens,user=>{const perms=Object.keys(permissionLabels).filter(key=>user.permissoes?.[key]).map(key=>permissionLabels[key]).join(", ")||"Sem permissões operacionais";const controls=user.role==="admin"?"":`<button class="secondary edit-user" data-id="${user.id}">Editar / redefinir senha</button><button class="${user.ativo?"danger":"secondary"} toggle-user" data-id="${user.id}" data-active="${user.ativo?"0":"1"}">${user.ativo?"Desativar usuário":"Ativar usuário"}</button>`;return `<div class="item"><div class="line"><b>${esc(user.nome)}</b> <span class="badge">${user.role==="admin"?"Administrador":"Operador"}</span></div><div class="line">Usuário: ${esc(user.username)}</div><div class="line">Status: <b>${user.ativo?"Ativo":"Desativado"}</b></div><div class="line">Permissões: ${esc(user.role==="admin"?"Acesso completo":perms)}</div>${controls}</div>`;},"Nenhum usuário cadastrado.");document.querySelectorAll(".edit-user").forEach(btn=>btn.onclick=()=>editUser(Number(btn.dataset.id)));document.querySelectorAll(".toggle-user").forEach(btn=>btn.onclick=()=>toggleUser(Number(btn.dataset.id),btn.dataset.active==="1"));}catch(e){$("usersList").innerHTML=`<div class="msg err">${esc(e.message)}</div>`;}}
+function formatSessionTime(value){if(!value)return "—";try{return new Date(value).toLocaleString("pt-BR");}catch(e){return "—";}}
+function loadLanSessions(){
+  const list=$("lanSessionsList"), summary=$("lanSessionsSummary");
+  if(!list||!summary)return;
+  try{
+    const data=call("listarSessoesLan"), itens=data.itens||[];
+    const connected=itens.filter(item=>item.connected).length;
+    const active=itens.filter(item=>item.connected&&item.active).length;
+    summary.textContent=`${connected} conectado(s) · ${active} ativo(s) agora · ${itens.length} sessão(ões) registrada(s)`;
+    renderItems(list,itens,item=>{
+      const stateColor=item.connected?"#16a34a":"#dc2626";
+      const connectionText=item.connected?"Conectado":"Desconectado";
+      const activityText=item.connected?(item.active?"Ativo":"Conectado · sem atividade recente"):"Sem conexão";
+      return `<div class="item">
+        <div style="display:flex;align-items:center;gap:9px;flex-wrap:wrap">
+          <span style="width:10px;height:10px;border-radius:50%;background:${stateColor};display:inline-block;flex-shrink:0"></span>
+          <b>${esc(item.nome)}</b><span class="badge">${item.role==="admin"?"Administrador":"Operador"}</span>
+          <span style="margin-left:auto;font-size:12px;font-weight:700;color:${stateColor}">${connectionText}</span>
+        </div>
+        <div class="line">Usuário: ${esc(item.username)} · IP: ${esc(item.ip||"desconhecido")}</div>
+        <div class="line">Atividade: <b>${activityText}</b></div>
+        <div class="line">Último sinal: ${esc(formatSessionTime(item.lastSeen))}</div>
+        <div class="line">Última operação: ${esc(formatSessionTime(item.lastActivity))}</div>
+      </div>`;
+    },"Nenhum usuário entrou pelo Android nesta sessão.");
+  }catch(e){summary.textContent="Não foi possível consultar as sessões.";list.innerHTML=`<div class="msg err">${esc(e.message)}</div>`;}
+}
 function editUser(id){try{const user=call("listarUsuarios").itens.find(item=>item.id===id);if(!user)return;$("usrId").value=String(user.id);$("usrNome").value=user.nome;$("usrUsername").value=user.username;$("usrPassword").value="";$("userFormTitle").textContent="Editar operador";$("saveUserButton").textContent="Salvar alterações";document.querySelectorAll("[data-perm]").forEach(el=>el.checked=user.permissoes?.[el.dataset.perm]===true);clearMsg($("usrMsg"));$("usrNome").scrollIntoView({behavior:"smooth",block:"center"});}catch(e){showMsg($("usrMsg"),e.message,false);}}
 function saveUser(){clearMsg($("usrMsg"));try{const permissoes={};document.querySelectorAll("[data-perm]").forEach(el=>permissoes[el.dataset.perm]=el.checked);const data=call("salvarUsuario",{id:$("usrId").value?Number($("usrId").value):null,nome:$("usrNome").value,username:$("usrUsername").value,password:$("usrPassword").value,permissoes});showMsg($("usrMsg"),data.message,true);clearUserForm();loadUsers();}catch(e){showMsg($("usrMsg"),e.message,false);}}
 function toggleUser(id,ativo){try{const data=call("alternarUsuario",{id,ativo});loadUsers();showMsg($("usrMsg"),data.message,true);}catch(e){showMsg($("usrMsg"),e.message,false);}}
 
 document.querySelectorAll("[data-screen]").forEach(b=>b.onclick=()=>showScreen(b.dataset.screen));
+if($("refreshLanSessions"))$("refreshLanSessions").onclick=loadLanSessions;
+setInterval(()=>{if($("screen-usuarios")?.classList.contains("active")&&activeUser?.role==="admin")loadLanSessions();},10000);
 $("authLogin").onclick=doLogin;$("authPassword").addEventListener("keydown",e=>{if(e.key==="Enter")doLogin();});$("authUsername").addEventListener("keydown",e=>{if(e.key==="Enter")doLogin();});$("setupCreateAdmin").onclick=createInitialAdmin;$("setupPassword").addEventListener("keydown",e=>{if(e.key==="Enter")createInitialAdmin();});$("logoutButton").onclick=doLogout;$("saveUserButton").onclick=saveUser;$("clearUserForm").onclick=clearUserForm;
 $("salvarCadastro").onclick=salvarCadastro; $("consultarProdutos").onclick=consultarProdutos; $("salvarEntrada").onclick=salvarEntrada; $("abrirLotesEntrada").onclick=abrirLotesEntrada; $("salvarEndereco").onclick=salvarEndereco; $("salvarEnderecoDetalhe").onclick=salvarEnderecoDetalhe; $("consultarEnderecos").onclick=()=>consultarEnderecos(false); $("verEnderecosEntrada").onclick=()=>consultarEnderecos(true); $("consultarEstoque").onclick=consultarEstoque; $("buscar").onclick=buscarOrientacao; $("confirmar").onclick=confirmarSeparacao; $("cancelar").onclick=()=>{$("confirmBox").style.display="none";$("resultado").innerHTML="";}; $("consultarMovimentacoes").onclick=consultarMovimentacoes;
 $("abrirEnderecosCadastro").onclick=abrirEnderecosCadastro; $("fecharEnderecosCadastro").onclick=()=>$("cadEnderecosPopup").classList.remove("open"); $("fecharLotesEntrada").onclick=()=>$("lotesEntradaPopup").classList.remove("open"); $("fecharEnderecosPopup").onclick=()=>$("enderecosPopup").classList.remove("open"); $("fecharEnderecosEntradaPopup").onclick=()=>$("enderecosEntrada").classList.remove("open");
