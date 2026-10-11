@@ -549,7 +549,7 @@ class MyStockDatabase {
     }
     const orderId=Number(data.pedido_id)||0, orderItemId=Number(data.pedido_item_id)||0;
     if(orderItemId&&!orderId)this.fail("Ordem inválida. Acesse o pedido novamente.");
-    if(orderItemId){const oi=this.db.prepare("SELECT id,pedido_id,status FROM pedido_itens WHERE id=?").get(orderItemId);if(!oi||oi.pedido_id!==orderId||oi.status!=="PENDENTE")this.fail("Este item da ordem já foi atendido ou não pertence a ela.");}
+    if(orderItemId){const oi=this.db.prepare("SELECT i.id,i.pedido_id,i.status,i.quantidade,p.numero AS produto_numero FROM pedido_itens i JOIN produtos p ON p.id=i.produto_id WHERE i.id=?").get(orderItemId);if(!oi||oi.pedido_id!==orderId||oi.status!=="PENDENTE")this.fail("Este item da ordem já foi atendido ou não pertence a ela.");const baixada=orientacoes.reduce((sum,item)=>sum+Number(item.quantidade_baixa||0),0);if(orientacoes.some(item=>String(item.produto)!==String(oi.produto_numero))||baixada!==Number(oi.quantidade))this.fail("A orientação não corresponde ao produto e à quantidade da ordem. Estoque não alterado.");}
     const tx = this.db.transaction(() => {
       for (const item of orientacoes) {
         const atualRow = this.db.prepare("SELECT quantidade FROM estoque WHERE id = ?").get(item.estoque_id);
