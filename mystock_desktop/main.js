@@ -183,6 +183,7 @@ const Database = require("./database");
 let mainWindow;
 let database;
 let currentUser = null;
+let currentUserLastActivity = 0;
 
 function createWindow() {
   mainWindow = new BrowserWindow({
@@ -231,10 +232,20 @@ app.whenReady().then(() => {
     const methods = {
       statusAuth: () => database.authStatus(),
       enderecoLan: () => ({ok:true,port:LAN_PORT,ips:getLanIPv4Addresses()}),
-      listarSessoesLan: () => getLanSessions(),
+      listarSessoesLan: () => {
+        const data=getLanSessions();
+        if(currentUser) data.itens.unshift({
+          nome:currentUser.nome, username:currentUser.username, role:currentUser.role,
+          device:"Windows", ip:"Este computador", connected:true,
+          active:Date.now()-currentUserLastActivity<=5*60*1000,
+          lastSeen:Date.now(), lastActivity:currentUserLastActivity,
+          connectedFor:0
+        });
+        return data;
+      },
       criarAdminInicial: value => database.createInitialAdmin(JSON.parse(value || "{}")),
-      login: value => { const result=database.loginUser(JSON.parse(value||"{}")); if(result.ok)currentUser=result.user; return result; },
-      logout: () => { currentUser=null; return {ok:true}; },
+      login: value => { const result=database.loginUser(JSON.parse(value||"{}")); if(result.ok){currentUser=result.user;currentUserLastActivity=Date.now();} return result; },
+      logout: () => { currentUser=null;currentUserLastActivity=0; return {ok:true}; },
       listarUsuarios: () => database.listUsers(),
       salvarUsuario: value => database.saveUser(JSON.parse(value||"{}")),
       alternarUsuario: value => { const data=JSON.parse(value||"{}"); if(currentUser&&Number(data.id)===Number(currentUser.id))throw new Error("Não é permitido desativar a própria conta."); return database.toggleUser(data); },
@@ -260,6 +271,7 @@ app.whenReady().then(() => {
             const fresh=database.getUserById(currentUser.id);
             if(!fresh||!fresh.ativo){currentUser=null;throw new Error("Sua conta foi desativada. Faça login com uma conta ativa.");}
             currentUser=fresh;
+            if(name!=="listarSessoesLan")currentUserLastActivity=Date.now();
             if(adminOnly.has(name)&&currentUser.role!=="admin")throw new Error("Apenas o administrador pode gerenciar usuários.");
             const permission=permissionByMethod[name];
             if(permission&&currentUser.role!=="admin"&&currentUser.permissoes?.[permission]!==true)throw new Error("Seu usuário não tem permissão para esta operação.");
