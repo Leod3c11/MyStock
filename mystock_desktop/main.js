@@ -53,6 +53,7 @@ function startLanServer(db) {
     salvarEndereco: value => db.saveAddress(JSON.parse(value || "{}")),
     listarEnderecos: value => db.listAddresses(String(value) === "true"),
     registrarEntrada: value => db.registerEntry(JSON.parse(value || "{}")),
+    moverEstoque: value => db.moveStock(JSON.parse(value || "{}")),
     consultarEstoque: value => db.listStock(String(value || "")),
     listarLotes: value => db.listLots(String(value || "")),
     listarProdutos: value => db.listProducts(String(value || "")),
@@ -65,7 +66,7 @@ function startLanServer(db) {
   };
   const permissionByMethod = {
     salvarProduto:"cadastro", editarProduto:"cadastro", listarProdutos:"produtos", salvarCliente:"separacao", listarClientes:"separacao", criarPedido:"separacao", listarPedidos:"separacao", obterPedido:"separacao", registrarEntrada:"entrada",
-    listarLotes:"entrada", salvarEndereco:"enderecos", listarEnderecos:"enderecos", listarEstoqueMinimo:"produtos",
+    listarLotes:"entrada", moverEstoque:"produtos", salvarEndereco:"enderecos", listarEnderecos:"enderecos", listarEstoqueMinimo:"produtos",
     consultarEstoque:"consulta_estoque", previewSeparacao:"separacao",
     confirmarSeparacao:"separacao", listarMovimentacoes:"movimentacoes"
   };
@@ -343,6 +344,7 @@ app.whenReady().then(() => {
       salvarEndereco: value => database.saveAddress(JSON.parse(value || "{}")),
       listarEnderecos: value => database.listAddresses(String(value) === "true"),
       registrarEntrada: value => database.registerEntry(JSON.parse(value || "{}")),
+      moverEstoque: value => { if(!currentUser||currentUser.role!=="admin") throw new Error("Somente o administrador pode mover estoque entre endereços."); return database.moveStock(JSON.parse(value||"{}")); },
       consultarEstoque: value => database.listStock(String(value || "")),
       listarLotes: value => database.listLots(String(value || "")),
       listarProdutos: value => database.listProducts(String(value || "")),
