@@ -378,6 +378,22 @@ app.whenReady().then(() => {
         }
       });
     }
+    ipcMain.handle("mystock:backupDatabase", async (event) => {
+      if (!mainWindow || event.sender !== mainWindow.webContents) throw new Error("Solicitação não autorizada.");
+      if (!currentUser) throw new Error("Faça login para continuar.");
+      const fresh = database.getUserById(currentUser.id);
+      if (!fresh || !fresh.ativo || fresh.role !== "admin") throw new Error("Somente o administrador pode criar cópias de segurança.");
+      const choice = await dialog.showSaveDialog(mainWindow, {
+        title: "Criar cópia de segurança do MyStock",
+        defaultPath: "MyStock-backup-" + new Date().toISOString().replace(/[:.]/g, "-").slice(0,19) + ".db",
+        buttonLabel: "Salvar cópia",
+        filters: [{ name: "Banco de dados SQLite", extensions: ["db"] }]
+      });
+      if (choice.canceled || !choice.filePath) return {ok:false,canceled:true,message:"Cópia cancelada."};
+      await database.db.backup(choice.filePath);
+      return {ok:true,message:"Cópia de segurança criada com sucesso.",path:choice.filePath};
+    });
+
     createWindow();
   } catch (error) {
     dialog.showErrorBox("MyStock - erro ao iniciar", error.message || String(error));
