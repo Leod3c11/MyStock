@@ -14,6 +14,10 @@ let discoverySocket = null;
 function startLanServer(db) {
   const methods = {
     salvarProduto: value => db.saveProduct(JSON.parse(value || "{}")),
+    editarProduto: value => db.editProduct(JSON.parse(value || "{}")),
+    criarPedido: value => db.createOrder(JSON.parse(value || "{}")),
+    listarPedidos: value => db.listOrders(String(value || "")),
+    obterPedido: value => db.getOrder(JSON.parse(value || "{}").numero),
     salvarEndereco: value => db.saveAddress(JSON.parse(value || "{}")),
     listarEnderecos: value => db.listAddresses(String(value) === "true"),
     registrarEntrada: value => db.registerEntry(JSON.parse(value || "{}")),
@@ -25,7 +29,7 @@ function startLanServer(db) {
     confirmarSeparacao: value => db.confirmSeparation(JSON.parse(value || "{}"))
   };
   const permissionByMethod = {
-    salvarProduto:"cadastro", listarProdutos:"produtos", registrarEntrada:"entrada",
+    salvarProduto:"cadastro", editarProduto:"cadastro", listarProdutos:"produtos", criarPedido:"separacao", listarPedidos:"separacao", obterPedido:"separacao", registrarEntrada:"entrada",
     listarLotes:"entrada", salvarEndereco:"enderecos", listarEnderecos:"enderecos",
     consultarEstoque:"consulta_estoque", previewSeparacao:"separacao",
     confirmarSeparacao:"separacao", listarMovimentacoes:"movimentacoes"
@@ -250,6 +254,10 @@ app.whenReady().then(() => {
       salvarUsuario: value => database.saveUser(JSON.parse(value||"{}")),
       alternarUsuario: value => { const data=JSON.parse(value||"{}"); if(currentUser&&Number(data.id)===Number(currentUser.id))throw new Error("Não é permitido desativar a própria conta."); return database.toggleUser(data); },
       salvarProduto: value => database.saveProduct(JSON.parse(value || "{}")),
+      editarProduto: value => database.editProduct(JSON.parse(value || "{}")),
+      criarPedido: value => database.createOrder(JSON.parse(value || "{}")),
+      listarPedidos: value => database.listOrders(String(value || "")),
+      obterPedido: value => database.getOrder(JSON.parse(value || "{}").numero),
       salvarEndereco: value => database.saveAddress(JSON.parse(value || "{}")),
       listarEnderecos: value => database.listAddresses(String(value) === "true"),
       registrarEntrada: value => database.registerEntry(JSON.parse(value || "{}")),
@@ -260,7 +268,7 @@ app.whenReady().then(() => {
       previewSeparacao: value => database.previewSeparation(JSON.parse(value || "{}")),
       confirmarSeparacao: value => database.confirmSeparation(JSON.parse(value || "{}"))
     };
-    const permissionByMethod={salvarProduto:"cadastro",listarProdutos:"produtos",registrarEntrada:"entrada",listarLotes:"entrada",salvarEndereco:"enderecos",listarEnderecos:"enderecos",consultarEstoque:"consulta_estoque",previewSeparacao:"separacao",confirmarSeparacao:"separacao",listarMovimentacoes:"movimentacoes"};
+    const permissionByMethod={salvarProduto:"cadastro",editarProduto:"cadastro",listarProdutos:"produtos",criarPedido:"separacao",listarPedidos:"separacao",obterPedido:"separacao",registrarEntrada:"entrada",listarLotes:"entrada",salvarEndereco:"enderecos",listarEnderecos:"enderecos",consultarEstoque:"consulta_estoque",previewSeparacao:"separacao",confirmarSeparacao:"separacao",listarMovimentacoes:"movimentacoes"};
     const adminOnly=new Set(["listarUsuarios","salvarUsuario","alternarUsuario","listarSessoesLan"]);
     const publicMethods=new Set(["statusAuth","criarAdminInicial","login","logout","enderecoLan"]);
     for(const [name,fn] of Object.entries(methods)){
