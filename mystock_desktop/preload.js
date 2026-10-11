@@ -23,4 +23,6 @@ for (const name of methods) {
   api[name] = payload => ipcRenderer.sendSync("mystock:" + name, payload);
 }
 
+api.backupDatabase = () => ipcRenderer.invoke("mystock:backupDatabase");
+
 contextBridge.exposeInMainWorld("MyStock", Object.freeze(api));
