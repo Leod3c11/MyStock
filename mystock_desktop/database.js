@@ -532,7 +532,7 @@ class MyStockDatabase {
     const email=String(data.email||"").trim();
     const endereco=String(data.endereco||"").trim();
     if(nome.length<2)this.fail("Informe o nome do cliente (mínimo de 2 caracteres).");
-    if(email&&!/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(email))this.fail("Informe um e-mail válido.");
+    if(email&&!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))this.fail("Informe um e-mail válido.");
     try {
       if(id){
         const result=this.db.prepare("UPDATE clientes SET nome=?,documento=?,telefone=?,email=?,endereco=? WHERE id=? AND ativo=1").run(nome,documento,telefone,email,endereco,id);
