@@ -8,8 +8,37 @@ const crypto = require("node:crypto");
 const LAN_PORT = 8765;
 const DISCOVERY_PORT = 8766;
 const lanSessions = new Map();
+const loginFailures = new Map();
+const LOGIN_WINDOW_MS = 15 * 60 * 1000;
+const LOGIN_MAX_FAILURES = 5;
 let lanServer = null;
 let discoverySocket = null;
+
+function loginLockState(key) {
+  const now = Date.now();
+  const state = loginFailures.get(key);
+  if (!state) return { locked: false, remaining: LOGIN_MAX_FAILURES };
+  if (state.lockedUntil > now) return { locked: true, waitMs: state.lockedUntil - now, remaining: 0 };
+  if (now - state.windowStart >= LOGIN_WINDOW_MS || state.lockedUntil) {
+    loginFailures.delete(key);
+    return { locked: false, remaining: LOGIN_MAX_FAILURES };
+  }
+  return { locked: false, remaining: Math.max(0, LOGIN_MAX_FAILURES - state.count) };
+}
+
+function loginFailed(key) {
+  const now = Date.now();
+  let state = loginFailures.get(key);
+  if (!state || now - state.windowStart >= LOGIN_WINDOW_MS || state.lockedUntil) state = { count: 0, windowStart: now, lockedUntil: 0 };
+  state.count += 1;
+  if (state.count >= LOGIN_MAX_FAILURES) state.lockedUntil = now + LOGIN_WINDOW_MS;
+  loginFailures.set(key, state);
+  return loginLockState(key);
+}
+
+function loginSucceeded(key) {
+  loginFailures.delete(key);
+}
 
 function startLanServer(db) {
   const methods = {
@@ -63,7 +92,18 @@ function startLanServer(db) {
     catch (error) { return send(res, 400, {ok:false,error:error.message || "Requisição inválida."}); }
     try {
       if (req.url === "/api/login") {
-        const result = db.loginUser(body);
+        const username = String(body.username || "").trim().toLowerCase().slice(0,80);
+        const clientIp = String(req.socket.remoteAddress || "desconhecido").replace(/^::ffff:/, "");
+        const key = "lan:" + clientIp + ":" + username;
+        const lock = loginLockState(key);
+        if (lock.locked) return send(res, 429, {ok:false,error:"Muitas tentativas de acesso. Aguarde 15 minutos antes de tentar novamente."});
+        let result;
+        try { result = db.loginUser(body); }
+        catch (loginError) {
+          const state = loginFailed(key);
+          return send(res, state.locked ? 429 : 401, {ok:false,error:state.locked?"Muitas tentativas de acesso. Aguarde 15 minutos antes de tentar novamente.":"Usuário ou senha inválidos, ou conta desativada."});
+        }
+        loginSucceeded(key);
         const token = crypto.randomBytes(32).toString("hex");
         if (!result || !result.ok || !result.user) return send(res, 401, result || {ok:false,error:"Login inválido."});
         const now = Date.now();
@@ -266,7 +306,22 @@ app.whenReady().then(() => {
         return data;
       },
       criarAdminInicial: value => database.createInitialAdmin(JSON.parse(value || "{}")),
-      login: value => { const result=database.loginUser(JSON.parse(value||"{}")); if(result.ok){currentUser=result.user;currentUserLastActivity=Date.now();} return result; },
+      login: value => {
+        const credentials=JSON.parse(value||"{}");
+        const key="desktop:"+String(credentials.username||"").trim().toLowerCase().slice(0,80);
+        const lock=loginLockState(key);
+        if(lock.locked)throw new Error("Muitas tentativas de acesso. Aguarde 15 minutos antes de tentar novamente.");
+        try {
+          const result=database.loginUser(credentials);
+          loginSucceeded(key);
+          if(result.ok){currentUser=result.user;currentUserLastActivity=Date.now();}
+          return result;
+        } catch(error) {
+          const state=loginFailed(key);
+          if(state.locked)throw new Error("Muitas tentativas de acesso. Aguarde 15 minutos antes de tentar novamente.");
+          throw error;
+        }
+      },
       logout: () => { currentUser=null;currentUserLastActivity=0; return {ok:true}; },
       listarUsuarios: () => database.listUsers(),
       salvarUsuario: value => database.saveUser(JSON.parse(value||"{}")),
