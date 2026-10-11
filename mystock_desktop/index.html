@@ -632,7 +632,7 @@ function limparTelaOperacional(){
 
 function showScreen(name){
   if(!activeUser&&name!=="menu"){initializeAuth();return;}
-  const screenPermission={cadastro:"cadastro",produtos:"produtos",entrada:"entrada",enderecos:"enderecos","endereco-detalhe":"enderecos",estoque:"consulta_estoque",separacao:"separacao",movimentacoes:"movimentacoes"};
+  const screenPermission={cadastro:"cadastro",produtos:"produtos",entrada:"entrada",enderecos:"enderecos","endereco-detalhe":"enderecos",estoque:"consulta_estoque",pedidos:"separacao",clientes:"separacao",separacao:"separacao",movimentacoes:"movimentacoes"};
   if(activeUser&&activeUser.role!=="admin"&&screenPermission[name]&&activeUser.permissoes?.[screenPermission[name]]!==true){alert("Seu usuário não tem permissão para acessar esta tela.");return;}
   if(name==="usuarios"&&activeUser?.role!=="admin"){alert("Apenas o administrador pode gerenciar usuários.");return;}
   if(name==="usuarios"){loadUsers();loadLanSessions();}
