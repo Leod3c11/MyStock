@@ -160,41 +160,15 @@
       width: 100%; max-width: 520px; max-height: 85vh; overflow-y: auto; padding: 20px; 
       margin: auto; border-radius: 16px; background: #fff; color: #0f172a;
     }
-    /* Windows desktop workspace: persistent left navigation, independent from Android layout. */
-    #desktopSidebar { display:none; }
-    body.desktop-mode { --bg:#f1f5f9; }
-    .desktop-mode #desktopSidebar {
-      display:block; position:fixed; z-index:9; left:0; top:66px; bottom:0; width:260px;
-      overflow-y:auto; padding:18px 12px 28px; background:#0f172a; color:#e2e8f0;
-      border-right:1px solid #1e293b;
-    }
-    .desktop-mode .sidebar-heading { padding:0 12px 12px; font-size:11px; font-weight:800; letter-spacing:.12em; color:#94a3b8; text-transform:uppercase; }
-    .desktop-mode #desktopSidebar .process-group { margin:0 0 16px; }
-    .desktop-mode #desktopSidebar .process-title { color:#94a3b8; padding:0 12px; font-size:10px; margin-bottom:7px; }
-    .desktop-mode #desktopSidebar .menu-grid { gap:4px; }
-    .desktop-mode #desktopSidebar .menu-card {
-      padding:10px 11px; gap:10px; border:1px solid transparent; border-radius:9px;
-      background:transparent; color:#e2e8f0; box-shadow:none; min-height:46px;
-    }
-    .desktop-mode #desktopSidebar .menu-card:hover { transform:none; background:#1e293b; border-color:#334155; }
-    .desktop-mode #desktopSidebar .card-icon { width:30px; height:30px; border-radius:8px; }
-    .desktop-mode #desktopSidebar .menu-card strong { color:#f8fafc; font-size:12px; }
-    .desktop-mode #desktopSidebar .menu-card span { color:#94a3b8; font-size:10px; }
-    .desktop-mode #desktopSidebar .menu-card .badge { display:none; }
-    .desktop-mode main { max-width:none; width:auto; margin:0 0 0 260px; padding:26px 30px; }
-    .desktop-mode .kpi-grid { grid-template-columns:repeat(4,minmax(0,1fr)); gap:14px; }
-    .desktop-mode .kpi-card { padding:18px; }
-    .desktop-mode .kpi-value { font-size:25px; }
-    .desktop-mode .kpi-card.kpi-warning { border-color:#fca5a5; background:#fff7f7; }
-    .desktop-mode .kpi-card.kpi-warning .kpi-value { color:#b91c1c; }
-    .desktop-mode #estoqueMinimoAlertas { display:grid; grid-template-columns:repeat(auto-fit,minmax(240px,1fr)); gap:10px; margin:0 0 22px; }
-    .desktop-mode .stock-alert-item { margin:0; border-color:#fecaca; background:#fff7f7; }
-    .desktop-mode .screen:not(#screen-menu) { max-width:1500px; }
-    .desktop-mode .screen-title { position:sticky; top:72px; z-index:5; padding:10px 0; background:var(--bg); }
-    @media(max-width:1050px) {
-      .desktop-mode #desktopSidebar { width:220px; }
-      .desktop-mode main { margin-left:220px; padding:20px; }
-      .desktop-mode .kpi-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }
+    /* Keep the original MyStock layout; use available PC width and align content to the left. */
+    @media (min-width: 900px) {
+      main { max-width: 1180px; margin: 0 auto; padding: 20px 24px; }
+      #screen-menu { text-align: left; }
+      #screen-menu .process-group { max-width: 560px; margin-left: 0; margin-right: auto; }
+      #screen-menu .menu-grid { grid-template-columns: 1fr; }
+      .kpi-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; }
+      .kpi-card { padding: 16px; }
+      .kpi-value { font-size: 23px; }
     }
   </style>
 </head>
@@ -220,8 +194,6 @@
   </div>
   <div class="user-actions"><div class="user-badge"><span id="userNameBadge">Não autenticado</span><div id="userAvatar" class="avatar">MS</div></div><button id="logoutButton" class="secondary" style="display:none">Sair</button></div>
 </header>
-
-<aside id="desktopSidebar"><div class="sidebar-heading">Navegação</div></aside>
 
 <main>
   <!-- DASHBOARD COM KPIS REAIS -->
@@ -709,14 +681,6 @@ function editUser(id){try{const user=call("listarUsuarios").itens.find(item=>ite
 function saveUser(){clearMsg($("usrMsg"));try{const permissoes={};document.querySelectorAll("[data-perm]").forEach(el=>permissoes[el.dataset.perm]=el.checked);const data=call("salvarUsuario",{id:$("usrId").value?Number($("usrId").value):null,nome:$("usrNome").value,username:$("usrUsername").value,password:$("usrPassword").value,permissoes});showMsg($("usrMsg"),data.message,true);clearUserForm();loadUsers();}catch(e){showMsg($("usrMsg"),e.message,false);}}
 function toggleUser(id,ativo){try{const data=call("alternarUsuario",{id,ativo});loadUsers();showMsg($("usrMsg"),data.message,true);}catch(e){showMsg($("usrMsg"),e.message,false);}}
 
-function prepararLayoutDesktop(){
-  if(!window.MyStock || typeof window.MyStock.statusAuth!=="function") return;
-  document.body.classList.add("desktop-mode");
-  const sidebar=$("desktopSidebar"), dashboard=$("screen-menu");
-  if(!sidebar||!dashboard)return;
-  dashboard.querySelectorAll(".process-group").forEach(group=>sidebar.appendChild(group));
-}
-prepararLayoutDesktop();
 document.querySelectorAll("[data-screen]").forEach(b=>b.onclick=()=>showScreen(b.dataset.screen));
 if($("refreshLanSessions"))$("refreshLanSessions").onclick=loadLanSessions;
 setInterval(()=>{if($("screen-usuarios")?.classList.contains("active")&&activeUser?.role==="admin")loadLanSessions();},10000);
