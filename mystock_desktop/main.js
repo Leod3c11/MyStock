@@ -114,9 +114,19 @@ function startLanServer(db) {
       let payload = body.payload ?? "";
       if (typeof payload !== "string") payload = JSON.stringify(payload);
       try { payload = JSON.parse(payload); } catch {}
-      const result = method(typeof payload === "object" && payload !== null ? JSON.stringify(payload) : String(payload));
+      let result;
+      try {
+        result = method(typeof payload === "object" && payload !== null ? JSON.stringify(payload) : String(payload));
+      } catch (operationError) {
+        if (user.role === "operador" && !["listarAuditoria","listarAuditoriaOperadores"].includes(name)) {
+          try { db.recordAudit({usuario_id:user.id,operador_nome:user.nome,operador_username:user.username,dispositivo:"Android",endereco_ip:sessionData.ip,acao:name,sucesso:false,detalhes:{erro:String(operationError.message||"Falha na operação").slice(0,300)}}); } catch {}
+        }
+        throw operationError;
+      }
       if(user.role==="operador" && result && result.ok && !["listarAuditoria","listarAuditoriaOperadores"].includes(name)){
         try{db.recordAudit({usuario_id:user.id,operador_nome:user.nome,operador_username:user.username,dispositivo:"Android",endereco_ip:sessionData.ip,acao:name,detalhes:typeof payload==="object"&&payload!==null?payload:{filtro:String(payload||"")}});}catch{}
+      } else if (user.role === "operador" && result && result.ok === false && !["listarAuditoria","listarAuditoriaOperadores"].includes(name)) {
+        try { db.recordAudit({usuario_id:user.id,operador_nome:user.nome,operador_username:user.username,dispositivo:"Android",endereco_ip:sessionData.ip,acao:name,sucesso:false,detalhes:{erro:String(result.error||"Operação não concluída").slice(0,300)}}); } catch {}
       }
       return send(res, 200, result);
     } catch (error) {
@@ -302,7 +312,15 @@ app.whenReady().then(() => {
             try{database.recordAudit({usuario_id:currentUser.id,operador_nome:currentUser.nome,operador_username:currentUser.username,dispositivo:"Windows",endereco_ip:"Este computador",acao:name,detalhes:details});}catch{}
           }
           event.returnValue=JSON.stringify(result);
-        }catch(error){event.returnValue=JSON.stringify({ok:false,error:error&&error.message?error.message:"Falha interna."});}
+        }catch(error){
+          const auditMethods=new Set(["salvarProduto","editarProduto","criarPedido","listarPedidos","obterPedido","salvarEndereco","listarEnderecos","registrarEntrada","consultarEstoque","listarLotes","listarProdutos","listarEstoqueMinimo","listarMovimentacoes","previewSeparacao","confirmarSeparacao"]);
+          if(currentUser?.role==="operador"&&auditMethods.has(name)){
+            let details={};try{details=typeof payload==="string"?JSON.parse(payload||"{}"):payload||{};}catch{details={};}
+            details={...details,erro:String(error&&error.message?error.message:"Falha interna.").slice(0,300)};
+            try{database.recordAudit({usuario_id:currentUser.id,operador_nome:currentUser.nome,operador_username:currentUser.username,dispositivo:"Windows",endereco_ip:"Este computador",acao:name,sucesso:false,detalhes:details});}catch{}
+          }
+          event.returnValue=JSON.stringify({ok:false,error:error&&error.message?error.message:"Falha interna."});
+        }
       });
     }
     createWindow();
