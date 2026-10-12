@@ -5,13 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>MyStock - WMS Professional</title>
   <script src="https://unpkg.com/html5-qrcode">
-// Checkout, inventário físico e alertas operacionais.
-function executarCheckout(){try{const r=call("checkoutPedido",{numero:$("checkoutNumero").value.trim()});showMsg($("checkoutMsg"),r.message,true);$("checkoutNumero").value="";atualizarDashboardKPIs();consultarPedidos();}catch(e){showMsg($("checkoutMsg"),e.message,false);}}
-function registrarContagemInventario(){try{const r=call("contarInventario",{numero:$("invNumero").value.trim(),lote:$("invLote").value.trim(),endereco:$("invEndereco").value.trim(),quantidade_contada:Number($("invQtd").value)});showMsg($("invMsg"),r.message,true);$("invQtd").value="";atualizarDashboardKPIs();consultarEstoque();}catch(e){showMsg($("invMsg"),e.message,false);}}
-function carregarAlertasOperacionais(){try{const r=call("listarAlertasOperacionais","");renderItems($("alertasResultado"),r.itens||[],x=>'<div class="item"><b>'+esc(x.tipo.replaceAll("_"," "))+'</b><div class="line">'+esc(x.produto)+' — '+esc(x.nome)+'</div>'+(x.lote?'<div class="line">Lote: '+esc(x.lote)+'</div>':'')+'<div class="line">'+esc(x.detalhe)+'</div></div>',"Nenhum alerta operacional no momento.");}catch(e){$("alertasResultado").innerHTML='<div class="msg err">'+esc(e.message)+'</div>';}}
-$("checkoutValidar").onclick=executarCheckout;$("invSalvar").onclick=registrarContagemInventario;$("atualizarAlertas").onclick=carregarAlertasOperacionais;
-const showScreenOpsBase=showScreen;showScreen=function(name){showScreenOpsBase(name);if(name==="alertas")carregarAlertasOperacionais();if(name==="checkout")$("checkoutNumero").focus();};
-
 </script>
   <style>
     :root { 
@@ -815,6 +808,12 @@ $("abrirOrdem").onclick=abrirOrdemSeparacao;
 $("ordemNumero").addEventListener("keydown",e=>{if(e.key==="Enter")abrirOrdemSeparacao();});
 $("voltarOrdem").onclick=voltarIdentificacaoOrdemAndroid;
 const showScreenAntesFluxoOrdem=showScreen;showScreen=function(name){showScreenAntesFluxoOrdem(name);if(name==="separacao")limparFluxoSeparacao();};
+// Checkout, inventário físico e alertas operacionais.
+function executarCheckout(){try{const r=call("checkoutPedido",{numero:$("checkoutNumero").value.trim()});showMsg($("checkoutMsg"),r.message,true);$("checkoutNumero").value="";atualizarDashboardKPIs();consultarPedidos();}catch(e){showMsg($("checkoutMsg"),e.message,false);}}
+function registrarContagemInventario(){try{const r=call("contarInventario",{numero:$("invNumero").value.trim(),lote:$("invLote").value.trim(),endereco:$("invEndereco").value.trim(),quantidade_contada:Number($("invQtd").value)});showMsg($("invMsg"),r.message,true);$("invQtd").value="";atualizarDashboardKPIs();consultarEstoque();}catch(e){showMsg($("invMsg"),e.message,false);}}
+function carregarAlertasOperacionais(){try{const r=call("listarAlertasOperacionais","");renderItems($("alertasResultado"),r.itens||[],x=>'<div class="item"><b>'+esc(x.tipo.replaceAll("_"," "))+'</b><div class="line">'+esc(x.produto)+' — '+esc(x.nome)+'</div>'+(x.lote?'<div class="line">Lote: '+esc(x.lote)+'</div>':'')+'<div class="line">'+esc(x.detalhe)+'</div></div>',"Nenhum alerta operacional no momento.");}catch(e){$("alertasResultado").innerHTML='<div class="msg err">'+esc(e.message)+'</div>';}}
+$("checkoutValidar").onclick=executarCheckout;$("invSalvar").onclick=registrarContagemInventario;$("atualizarAlertas").onclick=carregarAlertasOperacionais;
+const showScreenOpsBase=showScreen;showScreen=function(name){showScreenOpsBase(name);if(name==="alertas")carregarAlertasOperacionais();if(name==="checkout")$("checkoutNumero").focus();};
 </script>
 </body>
 </html>
