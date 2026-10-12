@@ -66,13 +66,16 @@ function startLanServer(db) {
     listarAuditoriaOperadores: () => db.listAuditOperators(),
     listarAuditoria: value => db.listAudit(JSON.parse(value || "{}")),
     previewSeparacao: value => db.previewSeparation(JSON.parse(value || "{}")),
-    confirmarSeparacao: value => db.confirmSeparation(JSON.parse(value || "{}"))
+    confirmarSeparacao: value => db.confirmSeparation(JSON.parse(value || "{}")),
+    checkoutPedido: value => db.checkoutOrder(JSON.parse(value || "{}")),
+    contarInventario: value => db.countInventory(JSON.parse(value || "{}")),
+    listarAlertasOperacionais: () => db.listOperationalAlerts()
   };
   const permissionByMethod = {
     salvarProduto:"cadastro", editarProduto:"cadastro", listarProdutos:"produtos", salvarCliente:"separacao", listarClientes:"separacao", criarPedido:"separacao", listarPedidos:"separacao", obterPedido:"separacao", registrarEntrada:"entrada",
     listarLotes:"entrada", moverEstoque:"produtos", salvarEndereco:"enderecos", listarEnderecos:"enderecos", listarEstoqueMinimo:"produtos",
     consultarEstoque:"consulta_estoque", previewSeparacao:"separacao",
-    confirmarSeparacao:"separacao", listarMovimentacoes:"movimentacoes"
+    confirmarSeparacao:"separacao", checkoutPedido:"separacao", contarInventario:"consulta_estoque", listarAlertasOperacionais:"consulta_estoque", listarMovimentacoes:"movimentacoes"
   };
   const send = (res, status, data) => {
     res.writeHead(status, { "Content-Type":"application/json; charset=utf-8", "Cache-Control":"no-store" });
@@ -368,9 +371,12 @@ app.whenReady().then(() => {
       listarAuditoriaOperadores: () => database.listAuditOperators(),
       listarAuditoria: value => database.listAudit(JSON.parse(value || "{}")),
       previewSeparacao: value => database.previewSeparation(JSON.parse(value || "{}")),
-      confirmarSeparacao: value => database.confirmSeparation(JSON.parse(value || "{}"))
+      confirmarSeparacao: value => database.confirmSeparation(JSON.parse(value || "{}")),
+      checkoutPedido: value => database.checkoutOrder(JSON.parse(value || "{}")),
+      contarInventario: value => database.countInventory(JSON.parse(value || "{}")),
+      listarAlertasOperacionais: () => database.listOperationalAlerts()
     };
-    const permissionByMethod={salvarProduto:"cadastro",editarProduto:"cadastro",listarProdutos:"produtos",salvarCliente:"separacao",listarClientes:"separacao",listarEstoqueMinimo:"produtos",criarPedido:"separacao",listarPedidos:"separacao",obterPedido:"separacao",registrarEntrada:"entrada",listarLotes:"entrada",salvarEndereco:"enderecos",listarEnderecos:"enderecos",consultarEstoque:"consulta_estoque",previewSeparacao:"separacao",confirmarSeparacao:"separacao",listarMovimentacoes:"movimentacoes"};
+    const permissionByMethod={salvarProduto:"cadastro",editarProduto:"cadastro",listarProdutos:"produtos",salvarCliente:"separacao",listarClientes:"separacao",listarEstoqueMinimo:"produtos",criarPedido:"separacao",listarPedidos:"separacao",obterPedido:"separacao",registrarEntrada:"entrada",listarLotes:"entrada",salvarEndereco:"enderecos",listarEnderecos:"enderecos",consultarEstoque:"consulta_estoque",previewSeparacao:"separacao",confirmarSeparacao:"separacao",checkoutPedido:"separacao",contarInventario:"consulta_estoque",listarAlertasOperacionais:"consulta_estoque",listarMovimentacoes:"movimentacoes"};
     const adminOnly=new Set(["listarUsuarios","salvarUsuario","alternarUsuario","listarSessoesLan","listarAuditoriaOperadores","listarAuditoria"]);
     const publicMethods=new Set(["statusAuth","criarAdminInicial","login","logout","enderecoLan"]);
     for(const [name,fn] of Object.entries(methods)){
