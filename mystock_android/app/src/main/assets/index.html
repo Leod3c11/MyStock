@@ -4,7 +4,15 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>MyStock - WMS Professional</title>
-  <script src="https://unpkg.com/html5-qrcode"></script>
+  <script src="https://unpkg.com/html5-qrcode">
+// Checkout, inventário físico e alertas operacionais.
+function executarCheckout(){try{const r=call("checkoutPedido",{numero:$("checkoutNumero").value.trim()});showMsg($("checkoutMsg"),r.message,true);$("checkoutNumero").value="";atualizarDashboardKPIs();consultarPedidos();}catch(e){showMsg($("checkoutMsg"),e.message,false);}}
+function registrarContagemInventario(){try{const r=call("contarInventario",{numero:$("invNumero").value.trim(),lote:$("invLote").value.trim(),endereco:$("invEndereco").value.trim(),quantidade_contada:Number($("invQtd").value)});showMsg($("invMsg"),r.message,true);$("invQtd").value="";atualizarDashboardKPIs();consultarEstoque();}catch(e){showMsg($("invMsg"),e.message,false);}}
+function carregarAlertasOperacionais(){try{const r=call("listarAlertasOperacionais","");renderItems($("alertasResultado"),r.itens||[],x=>'<div class="item"><b>'+esc(x.tipo.replaceAll("_"," "))+'</b><div class="line">'+esc(x.produto)+' — '+esc(x.nome)+'</div>'+(x.lote?'<div class="line">Lote: '+esc(x.lote)+'</div>':'')+'<div class="line">'+esc(x.detalhe)+'</div></div>',"Nenhum alerta operacional no momento.");}catch(e){$("alertasResultado").innerHTML='<div class="msg err">'+esc(e.message)+'</div>';}}
+$("checkoutValidar").onclick=executarCheckout;$("invSalvar").onclick=registrarContagemInventario;$("atualizarAlertas").onclick=carregarAlertasOperacionais;
+const showScreenOpsBase=showScreen;showScreen=function(name){showScreenOpsBase(name);if(name==="alertas")carregarAlertasOperacionais();if(name==="checkout")$("checkoutNumero").focus();};
+
+</script>
   <style>
     :root { 
       --bg: #f8fafc; 
@@ -314,6 +322,13 @@
       </div>
     </div>
 
+    <div class="process-group" data-group="operacao">
+      <div class="process-title">Expedição e controle</div><div class="menu-grid">
+        <button class="menu-card" data-screen="checkout"><div class="card-icon">✓</div><div class="card-body"><div class="card-header-line"><strong>Checkout de pedido/remessa</strong><span class="badge">Expedição</span></div><span>Validar separação e finalizar expedição sem baixa duplicada.</span></div></button>
+        <button class="menu-card" data-screen="inventario"><div class="card-icon">≡</div><div class="card-body"><div class="card-header-line"><strong>Inventário físico</strong><span class="badge">Conferência</span></div><span>Conferir saldo por produto, lote e endereço.</span></div></button>
+        <button class="menu-card" data-screen="alertas"><div class="card-icon">!</div><div class="card-body"><div class="card-header-line"><strong>Alertas operacionais</strong><span class="badge">Atenção</span></div><span>Estoque mínimo, vencidos e vencimentos próximos.</span></div></button>
+      </div>
+    </div>
   </div>
 
   <!-- DEMAIS TELAS DO SISTEMA -->
@@ -397,6 +412,9 @@
   </div>
 
   <div id="taskModal" class="task-modal" role="dialog" aria-modal="true"><div class="task-modal-card"><h2 id="taskModalTitle">Confirmar tarefa</h2><p id="taskModalText"></p><div id="taskModalError" class="msg err" style="display:none"></div><div class="task-modal-actions"><button id="taskModalCancel" class="secondary" type="button">Cancelar</button><button id="taskModalConfirm" type="button">Confirmar</button></div></div></div>
+  <div id="screen-checkout" class="screen"><div class="screen-title"><button class="back-btn" data-screen="menu">Voltar</button><h2>Checkout de pedido/remessa</h2></div><section><p>A separação já baixa o estoque. O checkout apenas valida a ordem e marca a remessa como expedida, sem baixar novamente.</p><label for="checkoutNumero">Número da ordem</label><input id="checkoutNumero" placeholder="ORD-AAAAMMDD-0001"><button id="checkoutValidar">Validar e expedir</button><div id="checkoutMsg" class="msg"></div></section></div>
+  <div id="screen-inventario" class="screen"><div class="screen-title"><button class="back-btn" data-screen="menu">Voltar</button><h2>Inventário físico</h2></div><section><p>Informe o saldo físico contado em unidades. Divergências serão registradas no histórico.</p><label for="invNumero">Número/código do produto</label><input id="invNumero" placeholder="Código do produto"><label for="invLote">Lote</label><input id="invLote" placeholder="Lote contado"><label for="invEndereco">Endereço</label><input id="invEndereco" placeholder="Ex.: A-01-01"><label for="invQtd">Quantidade física contada</label><input id="invQtd" type="number" min="0" step="1" inputmode="numeric"><button id="invSalvar">Registrar contagem</button><div id="invMsg" class="msg"></div></section></div>
+  <div id="screen-alertas" class="screen"><div class="screen-title"><button class="back-btn" data-screen="menu">Voltar</button><h2>Alertas operacionais</h2></div><section><p>Estoque mínimo, lotes vencidos e lotes com vencimento nos próximos 30 dias.</p><button id="atualizarAlertas">Atualizar alertas</button><div id="alertasResultado"></div></section></div>
   <div id="screen-movimentacoes" class="screen">
     <div class="screen-title"><button class="back-btn" data-screen="menu">Voltar</button><h2>Movimentações</h2></div>
     <section><h2>Histórico Operacional</h2><label>Número do produto</label><input id="movNumero" inputmode="numeric" placeholder="Opcional"><button id="consultarMovimentacoes">Consultar movimentações</button><div id="movResultado"></div></section>
