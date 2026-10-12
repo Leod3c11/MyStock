@@ -20,7 +20,7 @@ const methods = [
   "listarAuditoriaOperadores",
   "listarAuditoria",
   "previewSeparacao",
-  "confirmarSeparacao"
+  "confirmarSeparacao", "checkoutPedido", "contarInventario", "listarAlertasOperacionais"
 ];
 
 const api = {};
