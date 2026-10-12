@@ -802,14 +802,14 @@ class MyStockDatabase {
   listOperationalAlerts() {
     const low=this.listLowStock().itens.map(x=>({tipo:"ESTOQUE_BAIXO",produto:x.numero,nome:x.nome,detalhe:"Saldo "+x.saldo_total+" / mínimo "+x.estoque_minimo}));
     const today=new Date();today.setHours(0,0,0,0);
-    const lots=this.rows(\`SELECT p.numero,p.nome,l.lote,l.vencimento,COALESCE(SUM(e.quantidade),0) AS saldo FROM lotes l JOIN produtos p ON p.id=l.produto_id LEFT JOIN estoque e ON e.lote_id=l.id GROUP BY p.id,l.id HAVING saldo>0\`);
+    const lots=this.rows(`SELECT p.numero,p.nome,l.lote,l.vencimento,COALESCE(SUM(e.quantidade),0) AS saldo FROM lotes l JOIN produtos p ON p.id=l.produto_id LEFT JOIN estoque e ON e.lote_id=l.id GROUP BY p.id,l.id HAVING saldo>0`);
     const dates=lots.map(x=>{const m=String(x.vencimento||"").match(/^(\d{2})\/(\d{2})\/(\d{4})$/);if(!m)return null;const d=new Date(Number(m[3]),Number(m[2])-1,Number(m[1]));d.setHours(0,0,0,0);const dias=Math.ceil((d-today)/86400000);if(dias<0)return{tipo:"VENCIDO",produto:x.numero,nome:x.nome,lote:x.lote,detalhe:"Vencido há "+Math.abs(dias)+" dia(s); saldo "+x.saldo};if(dias<=30)return{tipo:"VENCIMENTO_PROXIMO",produto:x.numero,nome:x.nome,lote:x.lote,detalhe:"Vence em "+dias+" dia(s); saldo "+x.saldo};return null;}).filter(Boolean);
     return this.ok({itens:[...low,...dates]});
   }
   countInventory(data) {
     const numero=String(data.numero||"").trim(),lote=String(data.lote||"").trim().toUpperCase(),endereco=String(data.endereco||"").trim().toUpperCase(),atual=Number(data.quantidade_contada);
     if(!numero||!lote||!endereco||!Number.isInteger(atual)||atual<0)this.fail("Informe produto, lote, endereço e uma contagem inteira igual ou maior que zero.");
-    return this.db.transaction(()=>{const row=this.db.prepare(\`SELECT e.id,e.quantidade,p.numero,p.nome,l.lote,en.codigo FROM estoque e JOIN lotes l ON l.id=e.lote_id JOIN produtos p ON p.id=l.produto_id JOIN enderecos en ON en.id=e.endereco_id WHERE (p.numero=? OR p.codigo_barras=?) AND UPPER(l.lote)=? AND UPPER(en.codigo)=?\`).get(numero,numero,lote,endereco);
+    return this.db.transaction(()=>{const row=this.db.prepare(`SELECT e.id,e.quantidade,p.numero,p.nome,l.lote,en.codigo FROM estoque e JOIN lotes l ON l.id=e.lote_id JOIN produtos p ON p.id=l.produto_id JOIN enderecos en ON en.id=e.endereco_id WHERE (p.numero=? OR p.codigo_barras=?) AND UPPER(l.lote)=? AND UPPER(en.codigo)=?`).get(numero,numero,lote,endereco);
       if(!row)this.fail("Produto/lote não encontrado nesse endereço. Confira os dados.");
       const diferenca=atual-Number(row.quantidade);if(diferenca===0)return this.ok({message:"Inventário conferido: o saldo já estava correto.",saldo:atual,diferenca:0});
       this.db.prepare("UPDATE estoque SET quantidade=? WHERE id=?").run(atual,row.id);
