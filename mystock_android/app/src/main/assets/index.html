@@ -809,8 +809,22 @@ $("ordemNumero").addEventListener("keydown",e=>{if(e.key==="Enter")abrirOrdemSep
 $("voltarOrdem").onclick=voltarIdentificacaoOrdemAndroid;
 const showScreenAntesFluxoOrdem=showScreen;showScreen=function(name){showScreenAntesFluxoOrdem(name);if(name==="separacao")limparFluxoSeparacao();};
 // Checkout, inventário físico e alertas operacionais.
-function executarCheckout(){try{const r=call("checkoutPedido",{numero:$("checkoutNumero").value.trim()});showMsg($("checkoutMsg"),r.message,true);$("checkoutNumero").value="";atualizarDashboardKPIs();consultarPedidos();}catch(e){showMsg($("checkoutMsg"),e.message,false);}}
-function registrarContagemInventario(){try{const r=call("contarInventario",{numero:$("invNumero").value.trim(),lote:$("invLote").value.trim(),endereco:$("invEndereco").value.trim(),quantidade_contada:Number($("invQtd").value)});showMsg($("invMsg"),r.message,true);$("invQtd").value="";atualizarDashboardKPIs();consultarEstoque();}catch(e){showMsg($("invMsg"),e.message,false);}}
+function executarCheckout(){try{
+ const numero=$("checkoutNumero").value.trim().toUpperCase();if(!numero)throw Error("Informe o número da ordem/remessa.");
+ const d=call("obterPedido",{numero});if(!d.pedido||!Array.isArray(d.itens))throw Error("Não foi possível conferir os itens desta ordem.");
+ if(String(d.pedido.status||"").toUpperCase()!=="CONCLUIDO")throw Error("Checkout bloqueado: a ordem precisa estar totalmente concluída na separação. Status atual: "+(d.pedido.status||"não informado")+".");
+ if(!d.itens.length||d.itens.some(i=>String(i.status||"").toUpperCase()!=="CONCLUIDO"))throw Error("Checkout bloqueado: ainda há itens sem separação concluída.");
+ const resumo=d.itens.map(i=>i.produto_numero+" — "+i.nome+" — "+i.quantidade+" un.").join("\\n");
+ if(!window.confirm("Conferir expedição da ordem "+d.pedido.numero+"?\\n\\n"+resumo+"\\n\\nO estoque já foi baixado na separação. O checkout NÃO fará outra baixa."))return;
+ const r=call("checkoutPedido",{numero});showMsg($("checkoutMsg"),r.message,true);$("checkoutNumero").value="";atualizarDashboardKPIs();consultarPedidos();carregarAlertasOperacionais();
+ }catch(e){showMsg($("checkoutMsg"),e.message,false);}}
+function registrarContagemInventario(){try{
+ const numero=$("invNumero").value.trim(),lote=$("invLote").value.trim(),endereco=$("invEndereco").value.trim(),campo=$("invQtd").value;
+ if(!numero||!lote||!endereco||campo==="")throw Error("Preencha produto, lote, endereço e quantidade física.");
+ const r=call("contarInventario",{numero,lote,endereco,quantidade_contada:Number(campo)});showMsg($("invMsg"),r.message,true);
+ $("invNumero").value="";$("invLote").value="";$("invEndereco").value="";$("invQtd").value="";
+ atualizarDashboardKPIs();consultarEstoque();carregarAlertasOperacionais();
+ }catch(e){showMsg($("invMsg"),e.message,false);}}
 function carregarAlertasOperacionais(){try{const r=call("listarAlertasOperacionais","");renderItems($("alertasResultado"),r.itens||[],x=>'<div class="item"><b>'+esc(x.tipo.replaceAll("_"," "))+'</b><div class="line">'+esc(x.produto)+' — '+esc(x.nome)+'</div>'+(x.lote?'<div class="line">Lote: '+esc(x.lote)+'</div>':'')+'<div class="line">'+esc(x.detalhe)+'</div></div>',"Nenhum alerta operacional no momento.");}catch(e){$("alertasResultado").innerHTML='<div class="msg err">'+esc(e.message)+'</div>';}}
 $("checkoutValidar").onclick=executarCheckout;$("invSalvar").onclick=registrarContagemInventario;$("atualizarAlertas").onclick=carregarAlertasOperacionais;
 const showScreenOpsBase=showScreen;showScreen=function(name){showScreenOpsBase(name);if(name==="alertas")carregarAlertasOperacionais();if(name==="checkout")$("checkoutNumero").focus();};
