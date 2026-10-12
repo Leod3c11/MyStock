@@ -814,8 +814,8 @@ function executarCheckout(){try{
  const d=call("obterPedido",{numero});if(!d.pedido||!Array.isArray(d.itens))throw Error("Não foi possível conferir os itens desta ordem.");
  if(String(d.pedido.status||"").toUpperCase()!=="CONCLUIDO")throw Error("Checkout bloqueado: a ordem precisa estar totalmente concluída na separação. Status atual: "+(d.pedido.status||"não informado")+".");
  if(!d.itens.length||d.itens.some(i=>String(i.status||"").toUpperCase()!=="CONCLUIDO"))throw Error("Checkout bloqueado: ainda há itens sem separação concluída.");
- const resumo=d.itens.map(i=>i.produto_numero+" — "+i.nome+" — "+i.quantidade+" un.").join("\\n");
- if(!window.confirm("Conferir expedição da ordem "+d.pedido.numero+"?\\n\\n"+resumo+"\\n\\nO estoque já foi baixado na separação. O checkout NÃO fará outra baixa."))return;
+ const resumo=d.itens.map(i=>i.produto_numero+" — "+i.nome+" — "+i.quantidade+" un.").join("\n");
+ if(!window.confirm("Conferir expedição da ordem "+d.pedido.numero+"?\n\n"+resumo+"\n\nO estoque já foi baixado na separação. O checkout NÃO fará outra baixa."))return;
  const r=call("checkoutPedido",{numero});showMsg($("checkoutMsg"),r.message,true);$("checkoutNumero").value="";atualizarDashboardKPIs();consultarPedidos();carregarAlertasOperacionais();
  }catch(e){showMsg($("checkoutMsg"),e.message,false);}}
 function registrarContagemInventario(){try{
