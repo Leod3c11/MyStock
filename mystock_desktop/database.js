@@ -325,6 +325,30 @@ class MyStockDatabase {
         status TEXT NOT NULL DEFAULT 'PENDENTE',
         UNIQUE(pedido_id, produto_id)
       );
+      CREATE TABLE IF NOT EXISTS checkout_conferencias (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        pedido_id INTEGER NOT NULL UNIQUE REFERENCES pedidos(id) ON DELETE CASCADE,
+        status TEXT NOT NULL DEFAULT 'EM_CONFERENCIA',
+        iniciado_em TEXT NOT NULL,
+        finalizado_em TEXT NOT NULL DEFAULT ''
+      );
+      CREATE TABLE IF NOT EXISTS checkout_caixas (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        conferencia_id INTEGER NOT NULL REFERENCES checkout_conferencias(id) ON DELETE CASCADE,
+        pedido_item_id INTEGER NOT NULL REFERENCES pedido_itens(id),
+        produto_id INTEGER NOT NULL REFERENCES produtos(id),
+        lote_id INTEGER NOT NULL REFERENCES lotes(id),
+        codigo_lido TEXT NOT NULL,
+        unidades INTEGER NOT NULL CHECK(unidades > 0),
+        lido_em TEXT NOT NULL
+      );
+      CREATE TABLE IF NOT EXISTS checkout_avulsas (
+        conferencia_id INTEGER NOT NULL REFERENCES checkout_conferencias(id) ON DELETE CASCADE,
+        pedido_item_id INTEGER NOT NULL REFERENCES pedido_itens(id),
+        quantidade INTEGER NOT NULL DEFAULT 0 CHECK(quantidade >= 0),
+        atualizado_em TEXT NOT NULL,
+        PRIMARY KEY(conferencia_id, pedido_item_id)
+      );
       CREATE TABLE IF NOT EXISTS auditoria (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         usuario_id INTEGER,
@@ -817,7 +841,99 @@ class MyStockDatabase {
       return this.ok({message:"Contagem registrada. Saldo ajustado de "+row.quantidade+" para "+atual+" unidade(s).",saldo_anterior:Number(row.quantidade),saldo:atual,diferenca});
     })();
   }
+  checkoutStatus(numero) {
+    const order=this.getOrder(numero);
+    const conf=this.db.prepare("SELECT * FROM checkout_conferencias WHERE pedido_id=?").get(order.pedido.id);
+    if(!conf)return this.ok({...order,conferencia:null,progresso:order.itens.map(i=>({...i,caixas:0,unidades_caixa:0,avulsas:0,confirmado:0,restante:i.quantidade}))});
+    const itens=order.itens.map(i=>{
+      const row=this.db.prepare(`SELECT COUNT(c.id) AS caixas,COALESCE(SUM(c.unidades),0) AS unidades_caixas,
+        COALESCE((SELECT a.quantidade FROM checkout_avulsas a WHERE a.conferencia_id=? AND a.pedido_item_id=i.id),0) AS avulsas
+        FROM pedido_itens i LEFT JOIN checkout_caixas c ON c.pedido_item_id=i.id AND c.conferencia_id=?
+        WHERE i.id=? GROUP BY i.id`).get(conf.id,conf.id,i.item_id)||{};
+      const confirmado=Number(row.unidades_caixas||0)+Number(row.avulsas||0);
+      return {...i,caixas:Number(row.caixas||0),unidades_caixa:Number(row.unidades_caixas||0),avulsas:Number(row.avulsas||0),confirmado,restante:Number(i.quantidade)-confirmado};
+    });
+    return this.ok({pedido:order.pedido,itens:order.itens,conferencia:conf,progresso:itens});
+  }
+
+  iniciarCheckoutFisico(data) {
+    const numero=String(data.numero||"").trim().toUpperCase();
+    if(!numero)this.fail("Informe o número da ordem/remessa.");
+    return this.db.transaction(()=>{
+      const order=this.getOrder(numero), status=String(order.pedido.status||"").trim().toUpperCase();
+      if(status!=="CONCLUIDO"&&status!=="CONCLUÍDO")this.fail("A ordem precisa estar totalmente concluída na separação.");
+      if(!order.itens.length||order.itens.some(i=>!["CONCLUIDO","CONCLUÍDO"].includes(String(i.status||"").toUpperCase())))this.fail("Existem itens sem separação concluída.");
+      if(["EXPEDIDO","CANCELADO","CANCELADA","CANCELLED"].includes(status))this.fail("Esta ordem já foi expedida ou cancelada.");
+      let conf=this.db.prepare("SELECT * FROM checkout_conferencias WHERE pedido_id=?").get(order.pedido.id);
+      if(conf&&conf.status==="CONCLUIDO")this.fail("Esta ordem já foi conferida e expedida.");
+      if(!conf){
+        const result=this.db.prepare("INSERT INTO checkout_conferencias(pedido_id,status,iniciado_em) VALUES(?,'EM_CONFERENCIA',?)").run(order.pedido.id,new Date().toISOString());
+        conf=this.db.prepare("SELECT * FROM checkout_conferencias WHERE id=?").get(result.lastInsertRowid);
+      }
+      return this.checkoutStatus(numero);
+    })();
+  }
+
+  biparCaixaCheckout(data) {
+    const numero=String(data.numero||"").trim().toUpperCase(), codigo=String(data.codigo||"").trim();
+    if(!numero||!codigo)this.fail("Leia o código da caixa e informe a ordem.");
+    let produtoRef="", loteRef="";
+    try { const obj=JSON.parse(codigo); produtoRef=String(obj.produto||obj.product||obj.codigo_produto||obj.codigo_barras||obj.numero||"").trim(); loteRef=String(obj.lote||obj.lot||"").trim(); } catch {}
+    if(!produtoRef){
+      const parts=codigo.split(/[|;#]/).map(x=>x.trim());
+      if(parts.length>=2){produtoRef=parts[0];loteRef=parts[1];}
+    }
+    if(!produtoRef||!loteRef)this.fail("O código precisa identificar produto e lote. Use o padrão produto|lote ou um QR com campos produto e lote.");
+    return this.db.transaction(()=>{
+      const state=this.checkoutStatus(numero), conf=state.conferencia;
+      if(!conf||conf.status!=="EM_CONFERENCIA")this.fail("Inicie a conferência física antes de bipar caixas.");
+      const match=this.db.prepare(`SELECT p.id AS produto_id,p.numero,p.codigo_barras,p.nome,l.id AS lote_id,l.lote,l.unidades_por_caixa
+        FROM produtos p JOIN lotes l ON l.produto_id=p.id
+        WHERE (UPPER(p.numero)=UPPER(?) OR UPPER(COALESCE(p.codigo_barras,''))=UPPER(?)) AND UPPER(l.lote)=UPPER(?)`).get(produtoRef,produtoRef,loteRef);
+      if(!match)this.fail("Produto/lote não encontrado. O código deve conter um produto e lote cadastrados.");
+      const item=state.itens.find(i=>Number(i.produto_id)===Number(match.produto_id));
+      if(!item)this.fail("Produto fora desta ordem: "+match.numero+" — "+match.nome+".");
+      const progress=state.progresso.find(i=>Number(i.item_id)===Number(item.item_id));
+      if(progress.confirmado+Number(match.unidades_por_caixa)>Number(item.quantidade))this.fail("Esta caixa excede a quantidade solicitada. Esperado: "+item.quantidade+" un.; já confirmado: "+progress.confirmado+" un.; caixa: "+match.unidades_por_caixa+" un.");
+      this.db.prepare("INSERT INTO checkout_caixas(conferencia_id,pedido_item_id,produto_id,lote_id,codigo_lido,unidades,lido_em) VALUES(?,?,?,?,?,?,?)")
+        .run(conf.id,item.item_id,match.produto_id,match.lote_id,codigo,Number(match.unidades_por_caixa),new Date().toISOString());
+      return this.checkoutStatus(numero);
+    })();
+  }
+
+  registrarAvulsasCheckout(data) {
+    const numero=String(data.numero||"").trim().toUpperCase(), itemId=Number(data.item_id), quantidade=Number(data.quantidade);
+    if(!numero||!Number.isInteger(itemId)||itemId<=0||!Number.isInteger(quantidade)||quantidade<0)this.fail("Informe item e quantidade avulsa válidos.");
+    return this.db.transaction(()=>{
+      const state=this.checkoutStatus(numero), conf=state.conferencia;
+      if(!conf||conf.status!=="EM_CONFERENCIA")this.fail("Inicie a conferência física antes de registrar unidades avulsas.");
+      const item=state.itens.find(i=>Number(i.item_id)===itemId), progress=state.progresso.find(i=>Number(i.item_id)===itemId);
+      if(!item||!progress)this.fail("Item não pertence a esta ordem.");
+      if(progress.unidades_caixa+quantidade>Number(item.quantidade))this.fail("Unidades avulsas ultrapassam a quantidade solicitada.");
+      this.db.prepare(`INSERT INTO checkout_avulsas(conferencia_id,pedido_item_id,quantidade,atualizado_em) VALUES(?,?,?,?)
+        ON CONFLICT(conferencia_id,pedido_item_id) DO UPDATE SET quantidade=excluded.quantidade,atualizado_em=excluded.atualizado_em`)
+        .run(conf.id,itemId,quantidade,new Date().toISOString());
+      return this.checkoutStatus(numero);
+    })();
+  }
+
+  finalizarCheckoutFisico(data) {
+    const numero=String(data.numero||"").trim().toUpperCase();
+    if(!numero)this.fail("Informe a ordem/remessa.");
+    return this.db.transaction(()=>{
+      const state=this.checkoutStatus(numero), conf=state.conferencia;
+      if(!conf||conf.status!=="EM_CONFERENCIA")this.fail("Não há conferência física em andamento para esta ordem.");
+      const faltas=state.progresso.filter(i=>i.confirmado!==Number(i.quantidade));
+      if(faltas.length)this.fail("Conferência incompleta: "+faltas.map(i=>i.produto_numero+" falta(m) "+(Number(i.quantidade)-i.confirmado)+" unidade(s)").join("; ")+".");
+      const result=this.db.prepare("UPDATE pedidos SET status='EXPEDIDO' WHERE id=? AND UPPER(status) IN ('CONCLUIDO','CONCLUÍDO')").run(state.pedido.id);
+      if(result.changes!==1)this.fail("A ordem foi alterada ou já expedida. Atualize a tela.");
+      this.db.prepare("UPDATE checkout_conferencias SET status='CONCLUIDO',finalizado_em=? WHERE id=?").run(new Date().toISOString(),conf.id);
+      return this.ok({message:"Conferência física concluída. Ordem EXPEDIDA sem nova baixa de estoque.",pedido:numero,baixa_estoque:false,itens_conferidos:state.itens.length});
+    })();
+  }
+
   checkoutOrder(data) {
+    return this.finalizarCheckoutFisico(data);
     const numero=String(data.numero||"").trim().toUpperCase();
     if(!numero)this.fail("Informe o número da ordem/remessa.");
     return this.db.transaction(()=>{
