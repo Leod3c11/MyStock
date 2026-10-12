@@ -813,19 +813,27 @@ class MyStockDatabase {
       if(!row)this.fail("Produto/lote não encontrado nesse endereço. Confira os dados.");
       const diferenca=atual-Number(row.quantidade);if(diferenca===0)return this.ok({message:"Inventário conferido: o saldo já estava correto.",saldo:atual,diferenca:0});
       this.db.prepare("UPDATE estoque SET quantidade=? WHERE id=?").run(atual,row.id);
-      this.addMovement(diferenca>0?"AJUSTE_INVENTARIO_ENTRADA":"AJUSTE_INVENTARIO_SAIDA",row.numero,row.nome,row.lote,row.codigo,Math.abs(diferenca),atual);
-      return this.ok({message:"Contagem registrada. Saldo ajustado de "+row.quantidade+" para "+atual+" unidade(s).",saldo:atual,diferenca});
+      this.addMovement(diferenca>0?"AJUSTE_INVENTARIO_ENTRADA":"AJUSTE_INVENTARIO_SAIDA",row.numero,row.nome,row.lote,row.codigo,diferenca,atual);
+      return this.ok({message:"Contagem registrada. Saldo ajustado de "+row.quantidade+" para "+atual+" unidade(s).",saldo_anterior:Number(row.quantidade),saldo:atual,diferenca});
     })();
   }
   checkoutOrder(data) {
-    const numero=String(data.numero||"").trim().toUpperCase();if(!numero)this.fail("Informe o número da ordem/remessa.");
-    return this.db.transaction(()=>{const pedido=this.db.prepare("SELECT id,numero,cliente,status FROM pedidos WHERE numero=?").get(numero);if(!pedido)this.fail("Ordem/remessa não encontrada.");
-      if(pedido.status==="EXPEDIDO")this.fail("Esta ordem já foi expedida. Nenhuma nova baixa foi realizada.");
-      const pendentes=this.db.prepare("SELECT COUNT(*) AS n FROM pedido_itens WHERE pedido_id=? AND status!='CONCLUIDO'").get(pedido.id).n;
+    const numero=String(data.numero||"").trim().toUpperCase();
+    if(!numero)this.fail("Informe o número da ordem/remessa.");
+    return this.db.transaction(()=>{
+      const pedido=this.db.prepare("SELECT id,numero,cliente,status FROM pedidos WHERE numero=?").get(numero);
+      if(!pedido)this.fail("Ordem/remessa não encontrada.");
+      const status=String(pedido.status||"").trim().toUpperCase();
+      if(status==="EXPEDIDO")this.fail("Esta ordem já foi expedida. Nenhuma nova baixa foi realizada.");
+      if(["CANCELADO","CANCELADA","CANCELLED"].includes(status))this.fail("Checkout bloqueado: esta ordem está cancelada.");
+      if(status!=="CONCLUIDO" && status!=="CONCLUÍDO")this.fail("Checkout bloqueado: a ordem ainda não está concluída na separação (status atual: "+(pedido.status||"sem status")+").");
+      const total=this.db.prepare("SELECT COUNT(*) AS n FROM pedido_itens WHERE pedido_id=?").get(pedido.id).n;
+      if(!total)this.fail("A ordem não possui itens.");
+      const pendentes=this.db.prepare("SELECT COUNT(*) AS n FROM pedido_itens WHERE pedido_id=? AND UPPER(status) NOT IN ('CONCLUIDO','CONCLUÍDO')").get(pedido.id).n;
       if(pendentes>0)this.fail("Checkout bloqueado: ainda existem "+pendentes+" item(ns) não separados.");
-      if(!this.db.prepare("SELECT COUNT(*) AS n FROM pedido_itens WHERE pedido_id=?").get(pedido.id).n)this.fail("A ordem não possui itens.");
-      this.db.prepare("UPDATE pedidos SET status='EXPEDIDO' WHERE id=?").run(pedido.id);
-      return this.ok({message:"Checkout concluído. Remessa marcada como EXPEDIDO; o estoque não foi baixado novamente.",pedido:numero,baixa_estoque:false});
+      const update=this.db.prepare("UPDATE pedidos SET status='EXPEDIDO' WHERE id=? AND UPPER(status) NOT IN ('EXPEDIDO','CANCELADO','CANCELADA','CANCELLED')").run(pedido.id);
+      if(update.changes!==1)this.fail("A ordem foi alterada por outra operação. Atualize a consulta e tente novamente.");
+      return this.ok({message:"Checkout concluído. Remessa marcada como EXPEDIDO; o estoque não foi baixado novamente.",pedido:numero,baixa_estoque:false,itens_conferidos:total});
     })();
   }
 }
