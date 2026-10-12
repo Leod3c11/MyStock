@@ -68,6 +68,11 @@ function startLanServer(db) {
     previewSeparacao: value => db.previewSeparation(JSON.parse(value || "{}")),
     confirmarSeparacao: value => db.confirmSeparation(JSON.parse(value || "{}")),
     checkoutPedido: value => db.checkoutOrder(JSON.parse(value || "{}")),
+    iniciarCheckoutFisico: value => db.iniciarCheckoutFisico(JSON.parse(value || "{}")),
+    statusCheckoutFisico: value => db.checkoutStatus(JSON.parse(value || "{}").numero),
+    biparCaixaCheckout: value => db.biparCaixaCheckout(JSON.parse(value || "{}")),
+    registrarAvulsasCheckout: value => db.registrarAvulsasCheckout(JSON.parse(value || "{}")),
+    finalizarCheckoutFisico: value => db.finalizarCheckoutFisico(JSON.parse(value || "{}")),
     contarInventario: value => db.countInventory(JSON.parse(value || "{}")),
     listarAlertasOperacionais: () => db.listOperationalAlerts()
   };
@@ -373,10 +378,15 @@ app.whenReady().then(() => {
       previewSeparacao: value => database.previewSeparation(JSON.parse(value || "{}")),
       confirmarSeparacao: value => database.confirmSeparation(JSON.parse(value || "{}")),
       checkoutPedido: value => database.checkoutOrder(JSON.parse(value || "{}")),
+      iniciarCheckoutFisico: value => database.iniciarCheckoutFisico(JSON.parse(value || "{}")),
+      statusCheckoutFisico: value => database.checkoutStatus(JSON.parse(value || "{}").numero),
+      biparCaixaCheckout: value => database.biparCaixaCheckout(JSON.parse(value || "{}")),
+      registrarAvulsasCheckout: value => database.registrarAvulsasCheckout(JSON.parse(value || "{}")),
+      finalizarCheckoutFisico: value => database.finalizarCheckoutFisico(JSON.parse(value || "{}")),
       contarInventario: value => database.countInventory(JSON.parse(value || "{}")),
       listarAlertasOperacionais: () => database.listOperationalAlerts()
     };
-    const permissionByMethod={salvarProduto:"cadastro",editarProduto:"cadastro",listarProdutos:"produtos",salvarCliente:"separacao",listarClientes:"separacao",listarEstoqueMinimo:"produtos",criarPedido:"separacao",listarPedidos:"separacao",obterPedido:"separacao",registrarEntrada:"entrada",listarLotes:"entrada",salvarEndereco:"enderecos",listarEnderecos:"enderecos",consultarEstoque:"consulta_estoque",previewSeparacao:"separacao",confirmarSeparacao:"separacao",checkoutPedido:"separacao",contarInventario:"consulta_estoque",listarAlertasOperacionais:"consulta_estoque",listarMovimentacoes:"movimentacoes"};
+    const permissionByMethod={salvarProduto:"cadastro",editarProduto:"cadastro",listarProdutos:"produtos",salvarCliente:"separacao",listarClientes:"separacao",listarEstoqueMinimo:"produtos",criarPedido:"separacao",listarPedidos:"separacao",obterPedido:"separacao",registrarEntrada:"entrada",listarLotes:"entrada",salvarEndereco:"enderecos",listarEnderecos:"enderecos",consultarEstoque:"consulta_estoque",previewSeparacao:"separacao",confirmarSeparacao:"separacao",checkoutPedido:"separacao",iniciarCheckoutFisico:"separacao",statusCheckoutFisico:"separacao",biparCaixaCheckout:"separacao",registrarAvulsasCheckout:"separacao",finalizarCheckoutFisico:"separacao",contarInventario:"consulta_estoque",listarAlertasOperacionais:"consulta_estoque",listarMovimentacoes:"movimentacoes"};
     const adminOnly=new Set(["listarUsuarios","salvarUsuario","alternarUsuario","listarSessoesLan","listarAuditoriaOperadores","listarAuditoria"]);
     const publicMethods=new Set(["statusAuth","criarAdminInicial","login","logout","enderecoLan"]);
     for(const [name,fn] of Object.entries(methods)){
