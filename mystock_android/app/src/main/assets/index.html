@@ -816,7 +816,7 @@ function executarCheckout(){try{
  if(!d.itens.length||d.itens.some(i=>String(i.status||"").toUpperCase()!=="CONCLUIDO"))throw Error("Checkout bloqueado: ainda há itens sem separação concluída.");
  const resumo=d.itens.map(i=>i.produto_numero+" — "+i.nome+" — "+i.quantidade+" un.").join("\n");
  if(!window.confirm("Conferir expedição da ordem "+d.pedido.numero+"?\n\n"+resumo+"\n\nO estoque já foi baixado na separação. O checkout NÃO fará outra baixa."))return;
- const r=call("checkoutPedido",{numero});showMsg($("checkoutMsg"),r.message,true);$("checkoutNumero").value="";atualizarDashboardKPIs();consultarPedidos();carregarAlertasOperacionais();
+ const r=call("checkoutPedido",{numero});showMsg($("checkoutMsg"),r.message,true);$("checkoutNumero").value="";atualizarDashboardKPIs();carregarAlertasOperacionais();
  }catch(e){showMsg($("checkoutMsg"),e.message,false);}}
 function registrarContagemInventario(){try{
  const numero=$("invNumero").value.trim(),lote=$("invLote").value.trim(),endereco=$("invEndereco").value.trim(),campo=$("invQtd").value;
