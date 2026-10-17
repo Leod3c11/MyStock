@@ -80,7 +80,7 @@ function startLanServer(db) {
     salvarProduto:"cadastro", editarProduto:"cadastro", listarProdutos:"produtos", salvarCliente:"separacao", listarClientes:"separacao", criarPedido:"separacao", listarPedidos:"separacao", obterPedido:"separacao", registrarEntrada:"entrada",
     listarLotes:"entrada", moverEstoque:"produtos", salvarEndereco:"enderecos", listarEnderecos:"enderecos", listarEstoqueMinimo:"produtos",
     consultarEstoque:"consulta_estoque", previewSeparacao:"separacao",
-    confirmarSeparacao:"separacao", checkoutPedido:"separacao", contarInventario:"consulta_estoque", listarAlertasOperacionais:"consulta_estoque", listarMovimentacoes:"movimentacoes"
+    confirmarSeparacao:"separacao", checkoutPedido:"separacao", iniciarCheckoutFisico:"separacao", statusCheckoutFisico:"separacao", biparCaixaCheckout:"separacao", registrarAvulsasCheckout:"separacao", finalizarCheckoutFisico:"separacao", contarInventario:"consulta_estoque", listarAlertasOperacionais:"consulta_estoque", listarMovimentacoes:"movimentacoes"
   };
   const send = (res, status, data) => {
     res.writeHead(status, { "Content-Type":"application/json; charset=utf-8", "Cache-Control":"no-store" });
