@@ -48,7 +48,8 @@ public class MyStockBridge {
             out.put("dias_alerta", alertDays());
             out.put("som_ativo", prefs.getBoolean("som_ativo", true));
             out.put("vibracao_ativa", prefs.getBoolean("vibracao_ativa", true));
-            out.put("versao", "2.0.0");
+            out.put("tema", prefs.getString("tema", "light"));
+            out.put("versao", "2.1.0");
             return out.toString();
         } catch (Exception e) {
             return fail(e);
@@ -64,14 +65,17 @@ public class MyStockBridge {
             int dias = Math.max(1, Math.min(365, data.optInt("dias_alerta", 30)));
             boolean som = data.optBoolean("som_ativo", true);
             boolean vib = data.optBoolean("vibracao_ativa", true);
+            String tema = data.optString("tema", prefs.getString("tema", "light")).trim();
             if (op.isEmpty()) op = "Operador 01";
             if (dep.isEmpty()) dep = "CD Principal · Standalone";
+            if (tema.isEmpty()) tema = "light";
             prefs.edit()
                     .putString("operador", op)
                     .putString("deposito", dep)
                     .putInt("dias_alerta", dias)
                     .putBoolean("som_ativo", som)
                     .putBoolean("vibracao_ativa", vib)
+                    .putString("tema", tema)
                     .apply();
             JSONObject out = new JSONObject();
             out.put("ok", true);
@@ -80,6 +84,26 @@ public class MyStockBridge {
         } catch (Exception e) {
             return fail(e);
         }
+    }
+
+    @JavascriptInterface
+    public String salvarTema(String temaRaw) {
+        try {
+            String tema = temaRaw == null ? "light" : temaRaw.trim();
+            if (tema.isEmpty()) tema = "light";
+            prefs.edit().putString("tema", tema).apply();
+            JSONObject out = new JSONObject();
+            out.put("ok", true);
+            out.put("tema", tema);
+            return out.toString();
+        } catch (Exception e) {
+            return fail(e);
+        }
+    }
+
+    @JavascriptInterface
+    public void aplicarTemaNativo(String headerHex, String navHex, String bgHex, boolean lightNavIcons) {
+        activity.applySystemTheme(headerHex, navHex, bgHex, lightNavIcons);
     }
 
     @JavascriptInterface

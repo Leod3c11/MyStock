@@ -319,21 +319,173 @@
     return "exit";
   };
 
-  /* ===================== CONFIG ===================== */
+  /* ===================== THEMES & CONFIG ===================== */
+  const THEMES = [
+    {
+      id: "light",
+      name: "Corporativo Claro",
+      desc: "Cabeçalho navy executivo com superfícies claras",
+      swatchTop: "#0F172A",
+      swatchBottom: "#F1F5F9",
+      accent: "#1D4ED8",
+      native: { header: "#0F172A", nav: "#FFFFFF", bg: "#F1F5F9", lightNav: true }
+    },
+    {
+      id: "dark",
+      name: "Noturno Executivo",
+      desc: "Alto contraste escuro ideal para galpões e turnos noturnos",
+      swatchTop: "#0B1120",
+      swatchBottom: "#111827",
+      accent: "#3B82F6",
+      native: { header: "#0B1120", nav: "#0F172A", bg: "#090E1A", lightNav: false }
+    },
+    {
+      id: "system",
+      name: "Automático (Android)",
+      desc: "Alterna entre Claro e Escuro conforme o sistema",
+      swatchTop: "#0F172A",
+      swatchBottom: "#334155",
+      accent: "#38BDF8",
+      native: null
+    },
+    {
+      id: "emerald",
+      name: "Industrial Esmeralda",
+      desc: "Paleta verde-floresta para logística e saúde",
+      swatchTop: "#064E3B",
+      swatchBottom: "#ECFDF5",
+      accent: "#059669",
+      native: { header: "#064E3B", nav: "#FFFFFF", bg: "#F1F5F9", lightNav: true }
+    },
+    {
+      id: "graphite",
+      name: "Executivo Grafite",
+      desc: "Visual monocromático de alto contraste",
+      swatchTop: "#18181B",
+      swatchBottom: "#F4F4F5",
+      accent: "#0284C7",
+      native: { header: "#18181B", nav: "#FFFFFF", bg: "#F4F4F5", lightNav: true }
+    }
+  ];
+
+  const darkMediaQuery = window.matchMedia ? window.matchMedia("(prefers-color-scheme: dark)") : null;
+
+  function resolveThemeDef(themeId) {
+    if (themeId === "system") {
+      const prefersDark = darkMediaQuery && darkMediaQuery.matches;
+      return THEMES.find(t => t.id === (prefersDark ? "dark" : "light")) || THEMES[0];
+    }
+    return THEMES.find(t => t.id === themeId) || THEMES[0];
+  }
+
+  function applyTheme(themeId, persist = false) {
+    const selectedId = THEMES.some(t => t.id === themeId) ? themeId : "light";
+    state.config.tema = selectedId;
+    const effective = resolveThemeDef(selectedId);
+    document.documentElement.setAttribute("data-theme", effective.id);
+
+    // Update header sun/moon icon
+    const themeBtn = $("headerThemeBtn");
+    if (themeBtn) {
+      themeBtn.innerHTML = effective.id === "dark"
+        ? `<svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"/></svg>`
+        : `<svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"/></svg>`;
+    }
+
+    // Sync Android native status bar & navigation bar colors
+    try {
+      if (window.MyStock && typeof window.MyStock.aplicarTemaNativo === "function" && effective.native) {
+        window.MyStock.aplicarTemaNativo(
+          effective.native.header,
+          effective.native.nav,
+          effective.native.bg,
+          !!effective.native.lightNav
+        );
+      }
+      if (persist && window.MyStock && typeof window.MyStock.salvarTema === "function") {
+        call("salvarTema", selectedId);
+      }
+    } catch (_) {}
+
+    const badge = $("gestaoThemeBadge");
+    const meta = THEMES.find(t => t.id === selectedId) || THEMES[0];
+    if (badge) badge.textContent = meta.name;
+    renderThemeGrid($("gestaoThemeGrid"));
+  }
+
+  function buildThemeOptionsHtml() {
+    const activeId = state.config.tema || "light";
+    return `<div class="theme-grid">` + THEMES.map(t => {
+      const active = t.id === activeId;
+      return `<button type="button" class="theme-option${active ? " active" : ""}" data-select-theme="${t.id}">
+        <div class="theme-swatch">
+          <div style="background:${t.swatchTop}"></div>
+          <div style="background:${t.swatchBottom};border-top:3px solid ${t.accent}"></div>
+        </div>
+        <div class="theme-option-body">
+          <strong>${esc(t.name)}</strong>
+          <span>${esc(t.desc)}</span>
+        </div>
+        <div class="theme-check">
+          <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
+        </div>
+      </button>`;
+    }).join("") + `</div>`;
+  }
+
+  function renderThemeGrid(container) {
+    if (!container) return;
+    container.innerHTML = buildThemeOptionsHtml();
+    container.querySelectorAll("[data-select-theme]").forEach(btn => {
+      btn.onclick = () => {
+        const id = btn.dataset.selectTheme;
+        applyTheme(id, true);
+        vibrate(25);
+        const t = THEMES.find(x => x.id === id);
+        toast("Tema alterado: " + (t ? t.name : id), "ok");
+      };
+    });
+  }
+
+  function openThemeModal() {
+    openPicker("Tema do Aplicativo", buildThemeOptionsHtml(), body => {
+      body.querySelectorAll("[data-select-theme]").forEach(btn => {
+        btn.onclick = () => {
+          const id = btn.dataset.selectTheme;
+          applyTheme(id, true);
+          vibrate(25);
+          closePicker();
+          const t = THEMES.find(x => x.id === id);
+          toast("Tema alterado: " + (t ? t.name : id), "ok");
+        };
+      });
+    });
+  }
+
+  if (darkMediaQuery && darkMediaQuery.addEventListener) {
+    darkMediaQuery.addEventListener("change", () => {
+      if (state.config.tema === "system") applyTheme("system", false);
+    });
+  }
+
+  function computeInitials(name) {
+    const words = String(name || "").trim().split(/\s+/).filter(w => /[A-Za-zÀ-ÿ]/.test(w));
+    if (words.length >= 2) return (words[0][0] + words[1][0]).toUpperCase();
+    if (words.length === 1) return words[0].slice(0, 2).toUpperCase();
+    return "OP";
+  }
+
   function loadConfig() {
     try {
       const cfg = call("obterConfig");
       state.config = cfg;
       $("headerDeposito").textContent = cfg.deposito || "CD Principal · Standalone";
       $("dashOperadorTag").textContent = cfg.operador || "Operador 01";
-      const initials = (cfg.operador || "OP")
-        .split(/\s+/)
-        .filter(Boolean)
-        .slice(0, 2)
-        .map(p => p[0].toUpperCase())
-        .join("") || "OP";
-      $("headerOperatorBtn").textContent = initials;
-    } catch (_) {}
+      $("headerOperatorBtn").textContent = computeInitials(cfg.operador);
+      applyTheme(cfg.tema || "light", false);
+    } catch (_) {
+      applyTheme("light", false);
+    }
   }
 
   function loadConfigScreen() {
@@ -343,6 +495,7 @@
     $("cfgDiasAlerta").value = state.config.dias_alerta || 30;
     $("cfgSom").checked = !!state.config.som_ativo;
     $("cfgVibracao").checked = !!state.config.vibracao_ativa;
+    renderThemeGrid($("gestaoThemeGrid"));
     try {
       const a = call("listarAlertas");
       const n = (a.itens || []).length;
@@ -358,7 +511,8 @@
         deposito: $("cfgDeposito").value.trim(),
         dias_alerta: parseInt($("cfgDiasAlerta").value, 10) || 30,
         som_ativo: $("cfgSom").checked,
-        vibracao_ativa: $("cfgVibracao").checked
+        vibracao_ativa: $("cfgVibracao").checked,
+        tema: state.config.tema || "light"
       });
       loadConfig();
       vibrate(30);
@@ -1608,6 +1762,7 @@
     });
 
     $("brandHomeBtn").onclick = () => navigate("dashboard");
+    $("headerThemeBtn").onclick = openThemeModal;
     $("headerOperatorBtn").onclick = () => navigate("gestao");
     $("dashSeeAllMovs").onclick = e => { e.preventDefault(); navigate("movimentacoes"); };
     $("dashQuickScanStock").onclick = () => openScanner("Bipar Produto no Estoque", code => {

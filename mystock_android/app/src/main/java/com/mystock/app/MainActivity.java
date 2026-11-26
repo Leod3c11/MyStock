@@ -6,17 +6,23 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.graphics.Color;
+import android.graphics.Insets;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.VibrationEffect;
 import android.os.Vibrator;
 import android.view.View;
+import android.view.ViewGroup;
+import android.view.Window;
+import android.view.WindowInsets;
+import android.view.WindowInsetsController;
 import android.webkit.PermissionRequest;
 import android.webkit.WebChromeClient;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
+import android.widget.LinearLayout;
 import android.widget.Toast;
 
 import org.json.JSONObject;
@@ -32,6 +38,9 @@ public class MainActivity extends Activity {
     private static final int CREATE_FILE_REQUEST = 20;
     private static final int OPEN_BACKUP_REQUEST = 21;
 
+    private LinearLayout rootLayout;
+    private View statusBarSpacer;
+    private View navBarSpacer;
     private WebView webView;
     private MyStockDbHelper db;
     private String pendingExportContent;
@@ -42,15 +51,67 @@ public class MainActivity extends Activity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            View decor = getWindow().getDecorView();
-            decor.setSystemUiVisibility(decor.getSystemUiVisibility() | View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR);
+        Window window = getWindow();
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            window.setDecorFitsSystemWindows(false);
+            window.setStatusBarColor(Color.TRANSPARENT);
+            window.setNavigationBarColor(Color.TRANSPARENT);
+            window.setNavigationBarContrastEnforced(false);
         }
+
+        rootLayout = new LinearLayout(this);
+        rootLayout.setOrientation(LinearLayout.VERTICAL);
+        rootLayout.setBackgroundColor(Color.parseColor("#0F172A"));
+
+        statusBarSpacer = new View(this);
+        statusBarSpacer.setBackgroundColor(Color.parseColor("#0F172A"));
+        rootLayout.addView(statusBarSpacer, new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, 0));
 
         webView = new WebView(this);
         webView.setBackgroundColor(Color.parseColor("#F1F5F9"));
         webView.setOverScrollMode(View.OVER_SCROLL_NEVER);
-        setContentView(webView);
+        LinearLayout.LayoutParams webParams = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, 0, 1.0f);
+        rootLayout.addView(webView, webParams);
+
+        navBarSpacer = new View(this);
+        navBarSpacer.setBackgroundColor(Color.parseColor("#FFFFFF"));
+        rootLayout.addView(navBarSpacer, new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, 0));
+
+        setContentView(rootLayout);
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            rootLayout.setOnApplyWindowInsetsListener((v, insets) -> {
+                Insets topBars = insets.getInsets(WindowInsets.Type.statusBars() | WindowInsets.Type.displayCutout());
+                Insets navBars = insets.getInsets(WindowInsets.Type.navigationBars());
+                Insets ime = insets.getInsets(WindowInsets.Type.ime());
+
+                ViewGroup.LayoutParams topLp = statusBarSpacer.getLayoutParams();
+                if (topLp.height != topBars.top) {
+                    topLp.height = topBars.top;
+                    statusBarSpacer.setLayoutParams(topLp);
+                }
+
+                int bottomHeight = Math.max(navBars.bottom, ime.bottom);
+                ViewGroup.LayoutParams botLp = navBarSpacer.getLayoutParams();
+                if (botLp.height != bottomHeight) {
+                    botLp.height = bottomHeight;
+                    navBarSpacer.setLayoutParams(botLp);
+                }
+
+                int padLeft = Math.max(topBars.left, navBars.left);
+                int padRight = Math.max(topBars.right, navBars.right);
+                rootLayout.setPadding(padLeft, 0, padRight, 0);
+
+                return WindowInsets.CONSUMED;
+            });
+            rootLayout.requestApplyInsets();
+        }
+
+        // Apply initial native bar contrast
+        applySystemTheme("#0F172A", "#FFFFFF", "#F1F5F9", true);
 
         WebSettings settings = webView.getSettings();
         settings.setJavaScriptEnabled(true);
@@ -80,6 +141,47 @@ public class MainActivity extends Activity {
         }
 
         webView.loadUrl("file:///android_asset/index.html");
+    }
+
+    public void applySystemTheme(String headerHex, String navHex, String bgHex, boolean lightNavIcons) {
+        runOnUiThread(() -> {
+            try {
+                int headerColor = Color.parseColor(headerHex);
+                int navColor = Color.parseColor(navHex);
+                int bgColor = Color.parseColor(bgHex);
+
+                if (rootLayout != null) rootLayout.setBackgroundColor(headerColor);
+                if (statusBarSpacer != null) statusBarSpacer.setBackgroundColor(headerColor);
+                if (navBarSpacer != null) navBarSpacer.setBackgroundColor(navColor);
+                if (webView != null) webView.setBackgroundColor(bgColor);
+
+                Window window = getWindow();
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                    WindowInsetsController controller = window.getInsetsController();
+                    if (controller != null) {
+                        // Status bar always sits over dark corporate header -> light (white) status icons
+                        controller.setSystemBarsAppearance(0, WindowInsetsController.APPEARANCE_LIGHT_STATUS_BARS);
+                        int navFlag = lightNavIcons ? WindowInsetsController.APPEARANCE_LIGHT_NAVIGATION_BARS : 0;
+                        controller.setSystemBarsAppearance(navFlag, WindowInsetsController.APPEARANCE_LIGHT_NAVIGATION_BARS);
+                    }
+                } else {
+                    window.setStatusBarColor(headerColor);
+                    window.setNavigationBarColor(navColor);
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                        View decor = window.getDecorView();
+                        int flags = decor.getSystemUiVisibility();
+                        flags &= ~View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR;
+                        if (lightNavIcons) {
+                            flags |= View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR;
+                        } else {
+                            flags &= ~View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR;
+                        }
+                        decor.setSystemUiVisibility(flags);
+                    }
+                }
+            } catch (Exception ignored) {
+            }
+        });
     }
 
     public boolean hasCameraPermission() {

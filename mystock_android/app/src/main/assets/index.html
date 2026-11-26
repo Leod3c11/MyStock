@@ -26,7 +26,10 @@
   </div>
   <div class="header-right">
     <span class="offline-pill" title="Banco SQLite local no dispositivo"><span class="offline-dot"></span>Local</span>
-    <button class="operator-btn" id="headerOperatorBtn" title="Perfil e Configurações">OP</button>
+    <button class="header-icon-btn" id="headerThemeBtn" title="Alterar Tema">
+      <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
+    </button>
+    <button class="header-icon-btn" id="headerOperatorBtn" title="Perfil e Configurações">OP</button>
   </div>
 </header>
 
@@ -66,17 +69,17 @@
 
     <div class="kpi-grid-2">
       <div class="kpi-tile" data-go="pedidos">
-        <div class="kpi-tile-head"><span>Ordens Pendentes</span><span class="badge">Picking</span></div>
+        <div class="kpi-tile-head"><span>Ordens</span><span class="badge">Picking</span></div>
         <div class="kpi-tile-val num" id="kpiPedidosPend">0</div>
         <div class="kpi-tile-sub num" id="kpiCheckoutWait">0 aguardando checkout</div>
       </div>
       <div class="kpi-tile" id="kpiAlertasTile" data-go="alertas">
-        <div class="kpi-tile-head"><span>Alertas Críticos</span><span class="badge warn" id="kpiAlertasTag">OK</span></div>
+        <div class="kpi-tile-head"><span>Alertas</span><span class="badge warn" id="kpiAlertasTag">OK</span></div>
         <div class="kpi-tile-val num" id="kpiAlertasTotal">0</div>
         <div class="kpi-tile-sub" id="kpiAlertasSub">Vencimentos e mínimo</div>
       </div>
       <div class="kpi-tile" data-go="transferencia">
-        <div class="kpi-tile-head"><span>Tarefas Mov.</span><span class="badge slate">Interno</span></div>
+        <div class="kpi-tile-head"><span>Tarefas</span><span class="badge slate">Interno</span></div>
         <div class="kpi-tile-val num" id="kpiTarefasPend">0</div>
         <div class="kpi-tile-sub">Transferências pendentes</div>
       </div>
@@ -95,11 +98,11 @@
       </button>
       <button class="quick-btn" data-go="separacao">
         <div class="quick-icon"><svg width="19" height="19" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10"/></svg></div>
-        <div class="quick-text"><strong>Separação FEFO</strong><span>Baixa orientada</span></div>
+        <div class="quick-text"><strong>Separação</strong><span>Baixa FEFO</span></div>
       </button>
       <button class="quick-btn" id="dashQuickScanStock">
         <div class="quick-icon slate"><svg width="19" height="19" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 7V5a2 2 0 012-2h2M17 3h2a2 2 0 012 2v2M21 17v2a2 2 0 01-2 2h-2M7 21H5a2 2 0 01-2-2v-2M7 12h10"/></svg></div>
-        <div class="quick-text"><strong>Bipar Estoque</strong><span>Consulta instantânea</span></div>
+        <div class="quick-text"><strong>Bipar Estoque</strong><span>Consulta rápida</span></div>
       </button>
       <button class="quick-btn" data-go="transferencia">
         <div class="quick-icon warn"><svg width="19" height="19" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/></svg></div>
@@ -245,6 +248,15 @@
       </button>
     </div>
 
+    <div class="section-label"><span>Aparência e Tema</span></div>
+    <div class="card">
+      <div class="card-header" style="margin-bottom:10px">
+        <h3 class="card-title">Tema do Aplicativo</h3>
+        <span class="badge" id="gestaoThemeBadge">Corporativo Claro</span>
+      </div>
+      <div id="gestaoThemeGrid" class="theme-grid"></div>
+    </div>
+
     <div class="section-label"><span>Portabilidade de Dados (100% Local)</span></div>
     <div class="card">
       <p style="margin:0 0 10px;font-size:12.5px;color:var(--muted)">Todos os dados ficam gravados no banco SQLite do aparelho. Exporte backups JSON ou planilhas CSV quando desejar, sem depender de PC.</p>
@@ -282,7 +294,7 @@
     <div class="card">
       <button class="btn btn-outline" id="btnSeedDemo">Carregar Dados de Demonstração</button>
       <button class="btn btn-danger-outline" id="btnClearDb">Zerar Base de Dados Local</button>
-      <p style="margin:12px 0 0;font-size:11px;color:var(--muted);text-align:center">MyStock WMS Enterprise Standalone · v2.0.0 · SQLite Local Engine</p>
+      <p style="margin:12px 0 0;font-size:11px;color:var(--muted);text-align:center">MyStock WMS Enterprise Standalone · v2.1.0 · SQLite Local Engine</p>
     </div>
   </section>
 
