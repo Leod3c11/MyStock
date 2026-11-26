@@ -2,568 +2,840 @@
 <html lang="pt-BR">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>MyStock - WMS Professional</title>
-  <script src="https://unpkg.com/html5-qrcode"></script>
-  <style>
-    :root { 
-      --bg: #f8fafc; 
-      --panel: #ffffff; 
-      --text: #0f172a; 
-      --muted: #64748b; 
-      --primary: #2563eb; 
-      --primary-hover: #1d4ed8;
-      --primary-light: #eff6ff;
-      --danger: #ef4444; 
-      --ok: #059669; 
-      --ok-light: #ecfdf5;
-      --border: #e2e8f0; 
-      --radius: 12px;
-      --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-      --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.07), 0 2px 4px -1px rgba(0, 0, 0, 0.04);
-      --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.08), 0 4px 6px -2px rgba(0, 0, 0, 0.03);
-    }
-    * { box-sizing: border-box; }
-    body { 
-      margin: 0; background: var(--bg); color: var(--text); 
-      font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; 
-      -webkit-font-smoothing: antialiased;
-    }
-    header { 
-      padding: 14px 20px; background: var(--panel); border-bottom: 1px solid var(--border); 
-      position: sticky; top: 0; z-index: 10; display: flex; justify-content: space-between; align-items: center; 
-      box-shadow: var(--shadow-sm);
-    }
-    .brand { display: flex; align-items: center; gap: 10px; }
-    .brand-logo { 
-      width: 32px; height: 32px; background: var(--primary); border-radius: 8px; 
-      display: flex; align-items: center; justify-content: center; color: #fff; font-weight: 800; font-size: 16px;
-    }
-    header h1 { font-size: 18px; font-weight: 800; margin: 0; color: var(--text); letter-spacing: -0.02em; }
-    .user-badge { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--muted); font-weight: 600; }
-    .avatar { width: 28px; height: 28px; border-radius: 50%; background: #e2e8f0; display: flex; align-items: center; justify-content: center; color: var(--muted); font-weight: 700; font-size: 11px; }
-
-    main { padding: 16px; max-width: 760px; margin: 0 auto; }
-    
-    /* Dashboard KPIs */
-    .kpi-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 20px; }
-    .kpi-card { 
-      background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius); 
-      padding: 12px; box-shadow: var(--shadow-sm); display: flex; flex-direction: column;
-    }
-    .kpi-label { font-size: 11px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.03em; }
-    .kpi-value { font-size: 18px; font-weight: 800; color: var(--text); margin-top: 4px; }
-    .kpi-sub { font-size: 10px; font-weight: 600; color: var(--ok); margin-top: 2px; }
-
-    .dashboard-controls { margin-bottom: 16px; }
-    .search-bar { position: relative; margin-bottom: 12px; }
-    .search-bar input { padding-left: 38px; }
-    .search-icon { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--muted); width: 16px; height: 16px; }
-
-    .nav-tabs { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 4px; margin-bottom: 12px; scrollbar-width: none; }
-    .nav-tabs::-webkit-scrollbar { display: none; }
-    .tab-btn { 
-      width: auto; margin: 0; padding: 6px 14px; font-size: 12px; font-weight: 700; 
-      background: var(--panel); color: var(--muted); border: 1px solid var(--border); 
-      border-radius: 20px; white-space: nowrap; box-shadow: none; cursor: pointer;
-    }
-    .tab-btn.active { background: var(--primary); color: #fff; border-color: var(--primary); }
-
-    section { 
-      background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius); 
-      padding: 18px; margin-bottom: 16px; box-shadow: var(--shadow-md);
-    }
-    h2 { font-size: 16px; font-weight: 700; margin: 0 0 14px; color: var(--text); }
-    
-    label { display: block; font-size: 13px; font-weight: 600; color: var(--muted); margin: 14px 0 6px; }
-    input { 
-      width: 100%; padding: 12px 14px; border: 1px solid var(--border); border-radius: var(--radius); 
-      font-size: 14px; background: #f8fafc; color: var(--text); transition: all 0.2s ease;
-    }
-    input:focus { outline: none; border-color: var(--primary); background: #fff; box-shadow: 0 0 0 3px rgba(37,99,235,0.1); }
-
-    button { 
-      width: 100%; border: 0; border-radius: var(--radius); padding: 12px 16px; margin-top: 10px; 
-      font-size: 14px; font-weight: 700; background: var(--primary); color: #fff; cursor: pointer;
-      box-shadow: var(--shadow-sm); transition: all 0.2s ease;
-    }
-    button:hover { background: var(--primary-hover); }
-    button.secondary { background: #475569; }
-    button.secondary:hover { background: #334155; }
-    button.danger { background: var(--danger); }
-    button.danger:hover { background: #dc2626; }
-    button:disabled { opacity: .55; cursor: not-allowed; box-shadow: none; }
-
-    .screen { display: none; animation: fadeIn 0.2s ease; }
-    .screen.active { display: block; }
-    @keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
-
-    .menu-grid { display: grid; gap: 12px; }
-    .process-group { margin-bottom: 20px; }
-    .process-title { font-size: 11px; font-weight: 800; color: var(--muted); margin: 0 0 10px; text-transform: uppercase; letter-spacing: .08em; }
-    
-    .menu-card { 
-      width: 100%; text-align: left; background: var(--panel); color: var(--text); 
-      border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; margin: 0; 
-      box-shadow: var(--shadow-sm); transition: all 0.2s ease; cursor: pointer; display: flex; align-items: center; gap: 14px;
-    }
-    .menu-card:hover { border-color: var(--primary); box-shadow: var(--shadow-md); transform: translateY(-2px); }
-    .card-icon { 
-      width: 42px; height: 42px; border-radius: 10px; background: var(--primary-light); 
-      display: flex; align-items: center; justify-content: center; color: var(--primary); flex-shrink: 0;
-    }
-    .card-body { flex: 1; }
-    .card-header-line { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2px; }
-    .menu-card strong { font-size: 15px; color: var(--text); font-weight: 700; }
-    .menu-card span { color: var(--muted); font-size: 12px; font-weight: 500; display: block; line-height: 1.3; }
-    
-    .badge { 
-      display: inline-block; padding: 2px 8px; border-radius: 999px; 
-      background: var(--primary-light); color: var(--primary); font-size: 10px; font-weight: 700; 
-    }
-    
-    .screen-title { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }
-    .back-btn { width: auto; min-width: 90px; margin: 0; padding: 10px 14px; background: #475569; font-size: 13px; }
-    .screen-title h2 { margin: 0; font-size: 18px; font-weight: 700; }
-    
-    .msg { padding: 12px 14px; border-radius: var(--radius); margin-top: 12px; display: none; font-size: 13px; font-weight: 500; white-space: pre-wrap; }
-    .msg.ok { display: block; background: var(--ok-light); color: #065f46; border: 1px solid #a7f3d0; }
-    .msg.err { display: block; background: #fef2f2; color: #991b1b; border: 1px solid #fecaca; }
-    
-    .item { border: 1px solid var(--border); border-radius: var(--radius); padding: 14px; margin-top: 10px; background: #f8fafc; }
-    .line { margin: 4px 0; font-size: 13px; color: #334155; }
-    .strong { font-size: 15px; font-weight: 800; color: var(--ok); margin-top: 6px; display: block; }
-    
-    .popup-panel { display: none; position: fixed; inset: 0; z-index: 20; padding: 20px; background: rgba(15,23,42,0.6); backdrop-filter: blur(6px); overflow-y: auto; }
-    .popup-panel.open { display: block; }
-    .popup-content { max-width: 580px; margin: 40px auto; padding: 20px; border-radius: 16px; background: var(--panel); box-shadow: var(--shadow-lg); }
-    
-    #reader,#readerCadastro,#readerEntrada,#readerEstoque { width: 100%; overflow: hidden; border-radius: var(--radius); background: #000; margin-top: 10px; border: 1px solid var(--border); }
-
-    #enderecosEntrada.popup-panel {
-      display: none; position: fixed; inset: 0; z-index: 9999; padding: 16px; overflow-y: auto; 
-      background: rgba(15,23,42,0.6); backdrop-filter: blur(6px); align-items: center; justify-content: center;
-    }
-    #enderecosEntrada.popup-panel.open { display: flex !important; }
-    #enderecosEntrada .popup-content {
-      width: 100%; max-width: 520px; max-height: 85vh; overflow-y: auto; padding: 20px; 
-      margin: auto; border-radius: 16px; background: #fff; color: #0f172a;
-    }
-  </style>
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+  <title>MyStock WMS Enterprise</title>
+  <link rel="stylesheet" href="app.css">
+  <script src="vendor/html5-qrcode.min.js"></script>
 </head>
 <body>
 
-<header>
-  <div class="brand">
-    <div class="brand-logo">MS</div>
-    <h1>MyStock WMS</h1>
+<!-- CORPORATE TOP BAR -->
+<header class="app-header">
+  <div class="brand" id="brandHomeBtn" style="cursor:pointer">
+    <div class="brand-mark">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+        <path d="M12 2.5L21 7.3L12 12.1L3 7.3L12 2.5Z" fill="#38BDF8"/>
+        <path d="M3 9.1L11.2 13.5V21.5L3 17V9.1Z" fill="#FFFFFF"/>
+        <path d="M21 9.1L12.8 13.5V21.5L21 17V9.1Z" fill="#93C5FD"/>
+      </svg>
+    </div>
+    <div class="brand-text">
+      <h1 class="brand-title">MyStock WMS</h1>
+      <span class="brand-sub" id="headerDeposito">CD Principal · Standalone</span>
+    </div>
   </div>
-  <div class="user-badge">
-    <span>Operador 01</span>
-    <div class="avatar">OP</div>
+  <div class="header-right">
+    <span class="offline-pill" title="Banco SQLite local no dispositivo"><span class="offline-dot"></span>Local</span>
+    <button class="operator-btn" id="headerOperatorBtn" title="Perfil e Configurações">OP</button>
   </div>
 </header>
 
-<main>
-  <!-- DASHBOARD COM KPIS REAIS -->
-  <div id="screen-menu" class="screen active">
-    
-    <div class="kpi-grid">
-      <div class="kpi-card">
-        <span class="kpi-label">Ocupação</span>
-        <span class="kpi-value" id="kpiOcupacao">0%</span>
-        <span class="kpi-sub" id="kpiOcupacaoSub">Armazém</span>
-      </div>
-      <div class="kpi-card">
-        <span class="kpi-label">Endereços</span>
-        <span class="kpi-value" id="kpiEnderecos">0</span>
-        <span class="kpi-sub">Livres p/ uso</span>
-      </div>
-      <div class="kpi-card">
-        <span class="kpi-label">Movs. Registro</span>
-        <span class="kpi-value" id="kpiMovs">0</span>
-        <span class="kpi-sub">Total histórico</span>
-      </div>
-    </div>
+<!-- FLOATING TOAST -->
+<div id="toast" class="toast" role="status" aria-live="polite"></div>
 
-    <div class="dashboard-controls">
-      <div class="search-bar">
-        <svg class="search-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
-        <input id="dashSearch" placeholder="Buscar funcionalidade..." oninput="filtrarDashboard()">
+<!-- MAIN CONTENT -->
+<main class="app-main">
+
+  <!-- ==================== 1. PAINEL EXECUTIVO ==================== -->
+  <section id="screen-dashboard" class="screen active">
+    <div class="hero-capacity">
+      <div class="hero-top">
+        <div>
+          <div class="hero-eyebrow">Ocupação do Armazém</div>
+          <div class="hero-percent num" id="dashOcupacao">0%</div>
+          <div class="hero-meta num" id="dashOcupacaoDetalhe">0 / 0 unidades alocadas</div>
+        </div>
+        <span class="hero-badge" id="dashOperadorTag">Operador 01</span>
       </div>
-      <div class="nav-tabs">
-        <button class="tab-btn active" onclick="filtrarAba('todos', this)">Todos</button>
-        <button class="tab-btn" onclick="filtrarAba('cadastro', this)">Cadastro</button>
-        <button class="tab-btn" onclick="filtrarAba('estoque', this)">Estoque</button>
-        <button class="tab-btn" onclick="filtrarAba('operacao', this)">Operação</button>
-        <button class="tab-btn" onclick="filtrarAba('historico', this)">Histórico</button>
+      <div class="progress-track">
+        <div class="progress-fill" id="dashOcupacaoBar" style="width:0%"></div>
+      </div>
+      <div class="hero-footer">
+        <span>Endereços livres: <strong class="num" id="dashEndLivres">0</strong>/<span class="num" id="dashEndTotal">0</span></span>
+        <span>SKUs: <strong class="num" id="dashSkus">0</strong> · Lotes: <strong class="num" id="dashLotes">0</strong></span>
       </div>
     </div>
 
-    <div class="process-group" data-group="cadastro">
-      <div class="process-title">Gestão de Cadastros</div>
-      <div class="menu-grid">
-        <button class="menu-card" data-screen="cadastro">
-          <div class="card-icon"><svg width="22" height="22" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path></svg></div>
-          <div class="card-body">
-            <div class="card-header-line"><strong>Cadastrar Produto</strong><span class="badge">Cadastro</span></div>
-            <span>Produto, lote, QC, datas e endereço inicial.</span>
-          </div>
-        </button>
+    <div id="dashAlertBanner" class="alert-banner" data-go="alertas">
+      <div class="alert-banner-text">
+        <strong id="dashAlertBannerTitle">Alertas operacionais ativos</strong>
+        <span id="dashAlertBannerSub">Verifique vencimentos e estoque mínimo.</span>
+      </div>
+      <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
+    </div>
 
-        <button class="menu-card" data-screen="produtos">
-          <div class="card-icon"><svg width="22" height="22" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg></div>
-          <div class="card-body">
-            <div class="card-header-line"><strong>Produtos Cadastrados</strong><span class="badge">Catálogo</span></div>
-            <span>Consulta de produtos, códigos, lotes e saldos.</span>
-          </div>
-        </button>
+    <div class="kpi-grid-2">
+      <div class="kpi-tile" data-go="pedidos">
+        <div class="kpi-tile-head"><span>Ordens Pendentes</span><span class="badge">Picking</span></div>
+        <div class="kpi-tile-val num" id="kpiPedidosPend">0</div>
+        <div class="kpi-tile-sub num" id="kpiCheckoutWait">0 aguardando checkout</div>
+      </div>
+      <div class="kpi-tile" id="kpiAlertasTile" data-go="alertas">
+        <div class="kpi-tile-head"><span>Alertas Críticos</span><span class="badge warn" id="kpiAlertasTag">OK</span></div>
+        <div class="kpi-tile-val num" id="kpiAlertasTotal">0</div>
+        <div class="kpi-tile-sub" id="kpiAlertasSub">Vencimentos e mínimo</div>
+      </div>
+      <div class="kpi-tile" data-go="transferencia">
+        <div class="kpi-tile-head"><span>Tarefas Mov.</span><span class="badge slate">Interno</span></div>
+        <div class="kpi-tile-val num" id="kpiTarefasPend">0</div>
+        <div class="kpi-tile-sub">Transferências pendentes</div>
+      </div>
+      <div class="kpi-tile" data-go="movimentacoes">
+        <div class="kpi-tile-head"><span>Auditoria</span><span class="badge ok">Log</span></div>
+        <div class="kpi-tile-val num" id="kpiTotalMovs">0</div>
+        <div class="kpi-tile-sub">Movimentações totais</div>
       </div>
     </div>
 
-    <div class="process-group" data-group="estoque">
-      <div class="process-title">Movimentação de Estoque</div>
-      <div class="menu-grid">
-        <button class="menu-card" data-screen="entrada">
-          <div class="card-icon"><svg width="22" height="22" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1"></path></svg></div>
-          <div class="card-body">
-            <div class="card-header-line"><strong>Registrar Entrada</strong><span class="badge">Recebimento</span></div>
-            <span>Adicionar saldo em endereço físico.</span>
-          </div>
-        </button>
+    <div class="section-label"><span>Ações Rápidas</span></div>
+    <div class="quick-grid">
+      <button class="quick-btn" data-go="entrada">
+        <div class="quick-icon ok"><svg width="19" height="19" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v12m0 0l-4-4m4 4l4-4M4 20h16"/></svg></div>
+        <div class="quick-text"><strong>Recebimento</strong><span>Registrar entrada</span></div>
+      </button>
+      <button class="quick-btn" data-go="separacao">
+        <div class="quick-icon"><svg width="19" height="19" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10"/></svg></div>
+        <div class="quick-text"><strong>Separação FEFO</strong><span>Baixa orientada</span></div>
+      </button>
+      <button class="quick-btn" id="dashQuickScanStock">
+        <div class="quick-icon slate"><svg width="19" height="19" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 7V5a2 2 0 012-2h2M17 3h2a2 2 0 012 2v2M21 17v2a2 2 0 01-2 2h-2M7 21H5a2 2 0 01-2-2v-2M7 12h10"/></svg></div>
+        <div class="quick-text"><strong>Bipar Estoque</strong><span>Consulta instantânea</span></div>
+      </button>
+      <button class="quick-btn" data-go="transferencia">
+        <div class="quick-icon warn"><svg width="19" height="19" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/></svg></div>
+        <div class="quick-text"><strong>Transferência</strong><span>Mover endereço</span></div>
+      </button>
+    </div>
 
-        <button class="menu-card" data-screen="enderecos">
-          <div class="card-icon"><svg width="22" height="22" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path></svg></div>
-          <div class="card-body">
-            <div class="card-header-line"><strong>Endereços e Capacidade</strong><span class="badge">Mapa</span></div>
-            <span>Gerenciar ocupação e limites do armazém.</span>
-          </div>
-        </button>
+    <div class="section-label">
+      <span>Últimas Movimentações</span>
+      <a href="#" id="dashSeeAllMovs" style="color:var(--brand);text-decoration:none;font-size:11.5px;text-transform:none;letter-spacing:0">Ver histórico</a>
+    </div>
+    <div class="card" id="dashRecentList"></div>
+  </section>
 
-        <button class="menu-card" data-screen="estoque">
-          <div class="card-icon"><svg width="22" height="22" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg></div>
-          <div class="card-body">
-            <div class="card-header-line"><strong>Consultar Estoque</strong><span class="badge">Inventário</span></div>
-            <span>Bipar QR/código e verificar posição e saldo.</span>
-          </div>
+  <!-- ==================== 2. HUB DE OPERAÇÕES ==================== -->
+  <section id="screen-operacoes" class="screen">
+    <div class="section-label"><span>Recebimento e Movimentação Interna</span></div>
+    <div class="menu-list">
+      <button class="menu-card" data-go="entrada">
+        <div class="menu-icon ok"><svg width="21" height="21" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v12m0 0l-4-4m4 4l4-4M4 20h16"/></svg></div>
+        <div class="menu-body">
+          <div class="menu-top"><strong>Registrar Entrada</strong><span class="badge ok">Putaway</span></div>
+          <p>Receber mercadoria em endereço com validação de capacidade e calculadora de caixas.</p>
+        </div>
+        <svg class="menu-chevron" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
+      </button>
+
+      <button class="menu-card" data-go="transferencia">
+        <div class="menu-icon warn"><svg width="21" height="21" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/></svg></div>
+        <div class="menu-body">
+          <div class="menu-top"><strong>Transferências e Tarefas</strong><span class="badge warn">Remanejamento</span></div>
+          <p>Transferir saldo entre endereços diretamente ou gerenciar tarefas programadas.</p>
+        </div>
+        <svg class="menu-chevron" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
+      </button>
+
+      <button class="menu-card" data-go="inventario">
+        <div class="menu-icon slate"><svg width="21" height="21" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/></svg></div>
+        <div class="menu-body">
+          <div class="menu-top"><strong>Inventário Físico</strong><span class="badge slate">Auditoria</span></div>
+          <p>Conferência cíclica por produto, lote e endereço com ajuste auditável automático.</p>
+        </div>
+        <svg class="menu-chevron" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
+      </button>
+    </div>
+
+    <div class="section-label"><span>Separação e Expedição</span></div>
+    <div class="menu-list">
+      <button class="menu-card" data-go="pedidos">
+        <div class="menu-icon"><svg width="21" height="21" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg></div>
+        <div class="menu-body">
+          <div class="menu-top"><strong>Ordens de Separação</strong><span class="badge">Pedidos</span></div>
+          <p>Criar pedidos multi-itens por cliente, acompanhar status e separar por FEFO.</p>
+        </div>
+        <svg class="menu-chevron" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
+      </button>
+
+      <button class="menu-card" data-go="separacao">
+        <div class="menu-icon"><svg width="21" height="21" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/></svg></div>
+        <div class="menu-body">
+          <div class="menu-top"><strong>Separação Avulsa (FEFO)</strong><span class="badge">Picking</span></div>
+          <p>Baixa direta priorizando o vencimento mais próximo com dupla confirmação.</p>
+        </div>
+        <svg class="menu-chevron" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
+      </button>
+
+      <button class="menu-card" data-go="checkout">
+        <div class="menu-icon ok"><svg width="21" height="21" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg></div>
+        <div class="menu-body">
+          <div class="menu-top"><strong>Checkout de Expedição</strong><span class="badge ok">Conferência</span></div>
+          <p>Bipar caixas e conferir avulsas para expedir ordens sem baixa duplicada.</p>
+        </div>
+        <svg class="menu-chevron" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
+      </button>
+    </div>
+  </section>
+
+  <!-- ==================== 3. CONSULTA DE ESTOQUE ==================== -->
+  <section id="screen-estoque" class="screen">
+    <div class="card">
+      <div class="card-header">
+        <h2 class="card-title">Inventário em Tempo Real</h2>
+        <span class="badge slate num" id="estoqueCountBadge">0 posições</span>
+      </div>
+      <div class="input-group">
+        <input id="estFiltro" type="search" placeholder="Código, QR, nome, lote ou endereço...">
+        <button class="btn-scan-inline" id="btnScanEstoque" title="Ler código com câmera">
+          <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 7V5a2 2 0 012-2h2M17 3h2a2 2 0 012 2v2M21 17v2a2 2 0 01-2 2h-2M7 21H5a2 2 0 01-2-2v-2M7 12h10"/></svg>
         </button>
       </div>
     </div>
+    <div id="estoqueResultado" class="data-list"></div>
+  </section>
 
-    <div class="process-group" data-group="operacao">
-      <div class="process-title">Operações de Separação</div>
-      <div class="menu-grid">
-        <button class="menu-card" data-screen="separacao">
-          <div class="card-icon"><svg width="22" height="22" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"></path></svg></div>
-          <div class="card-body">
-            <div class="card-header-line"><strong>Separação (Picking)</strong><span class="badge">Pedido</span></div>
-            <span>Atender pedidos de saída com validação por código.</span>
-          </div>
+  <!-- ==================== 4. CATÁLOGO & ENDEREÇOS ==================== -->
+  <section id="screen-catalogo" class="screen">
+    <div class="quick-grid" style="margin-bottom:12px">
+      <button class="quick-btn" data-go="cadastro">
+        <div class="quick-icon"><svg width="19" height="19" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg></div>
+        <div class="quick-text"><strong>Novo Produto</strong><span>SKU, lote e validade</span></div>
+      </button>
+      <button class="quick-btn" data-go="enderecos">
+        <div class="quick-icon slate"><svg width="19" height="19" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg></div>
+        <div class="quick-text"><strong>Endereços</strong><span>Mapa e capacidade</span></div>
+      </button>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <h2 class="card-title">Catálogo de Produtos e Lotes</h2>
+        <span class="badge slate num" id="prodCountBadge">0 lotes</span>
+      </div>
+      <div class="input-group">
+        <input id="prodFiltro" type="search" placeholder="Filtrar por código, nome ou lote...">
+        <button class="btn-scan-inline" id="btnScanProd" title="Ler código">
+          <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 7V5a2 2 0 012-2h2M17 3h2a2 2 0 012 2v2M21 17v2a2 2 0 01-2 2h-2M7 21H5a2 2 0 01-2-2v-2M7 12h10"/></svg>
         </button>
       </div>
     </div>
+    <div id="produtosResultado" class="data-list"></div>
+  </section>
 
-    <div class="process-group" data-group="historico">
-      <div class="process-title">Auditoria e Registro</div>
-      <div class="menu-grid">
-        <button class="menu-card" data-screen="movimentacoes">
-          <div class="card-icon"><svg width="22" height="22" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path></svg></div>
-          <div class="card-body">
-            <div class="card-header-line"><strong>Histórico de Movimentações</strong><span class="badge">Auditoria</span></div>
-            <span>Rastrear entradas, saídas e saldos por data.</span>
-          </div>
-        </button>
-      </div>
+  <!-- ==================== 5. GESTÃO, AUDITORIA & BACKUP ==================== -->
+  <section id="screen-gestao" class="screen">
+    <div class="section-label"><span>Monitoramento e Auditoria</span></div>
+    <div class="menu-list">
+      <button class="menu-card" data-go="alertas">
+        <div class="menu-icon danger"><svg width="21" height="21" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/></svg></div>
+        <div class="menu-body">
+          <div class="menu-top"><strong>Alertas Operacionais</strong><span class="badge danger" id="gestaoAlertBadge">0</span></div>
+          <p>Lotes vencidos, vencimentos próximos e produtos abaixo do estoque mínimo.</p>
+        </div>
+        <svg class="menu-chevron" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
+      </button>
+
+      <button class="menu-card" data-go="movimentacoes">
+        <div class="menu-icon slate"><svg width="21" height="21" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg></div>
+        <div class="menu-body">
+          <div class="menu-top"><strong>Histórico de Movimentações</strong><span class="badge slate">Auditoria</span></div>
+          <p>Rastreabilidade completa de entradas, saídas, transferências e inventários.</p>
+        </div>
+        <svg class="menu-chevron" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
+      </button>
     </div>
 
-  </div>
+    <div class="section-label"><span>Portabilidade de Dados (100% Local)</span></div>
+    <div class="card">
+      <p style="margin:0 0 10px;font-size:12.5px;color:var(--muted)">Todos os dados ficam gravados no banco SQLite do aparelho. Exporte backups JSON ou planilhas CSV quando desejar, sem depender de PC.</p>
+      <button class="btn" id="btnExportBackup">Exportar Backup Completo (.json)</button>
+      <button class="btn btn-outline" id="btnImportBackup">Restaurar Backup (.json)</button>
+      <button class="btn btn-ok" id="btnExportCsv">Exportar Relatório de Estoque (.csv)</button>
+    </div>
 
-  <!-- DEMAIS TELAS DO SISTEMA -->
-  <div id="screen-cadastro" class="screen">
-    <div class="screen-title"><button class="back-btn" data-screen="menu">Voltar</button><h2>Cadastrar produto</h2></div>
-    <section>
-      <h2>Dados do Produto</h2>
-      <label>Número do produto</label><input id="cadNumero" inputmode="numeric" placeholder="Ex.: 3000281">
-      <label>QR Code / código de barras</label><input id="cadCodigoBarras" inputmode="numeric" placeholder="Bipe ou digite">
-      <div id="readerCadastro"></div><button id="startScannerCadastro" class="secondary">Ler QR / código de barras</button><div id="scanCadastroMsg" class="msg"></div>
-      <label>Nome do produto</label><input id="cadNome" placeholder="Ex.: Fluconid">
-      <label>Lote</label><input id="cadLote" inputmode="numeric" placeholder="Ex.: 30010281">
-      <label>Unidades por caixa</label><input id="cadQc" inputmode="numeric" placeholder="Ex.: 60">
-      <label>Data de fabricação</label><input id="cadFabricacao" placeholder="DD/MM/AAAA">
-      <label>Data de vencimento</label><input id="cadVencimento" placeholder="DD/MM/AAAA">
-      <label>Quantidade inicial para endereçar</label><input id="cadQuantidadeEntrada" inputmode="numeric" placeholder="Opcional">
-      <label>Endereço selecionado</label><input id="cadEndereco" readonly placeholder="Opcional">
-      <button id="abrirEnderecosCadastro" class="secondary">Selecionar endereço disponível</button>
-      <div id="cadEnderecosPopup" class="popup-panel"><div class="popup-content"><h2>Endereços com espaço</h2><button id="fecharEnderecosCadastro" class="danger">Fechar</button><div id="cadEnderecosLista"></div></div></div>
-      <button id="salvarCadastro">Salvar produto</button><div id="cadMsg" class="msg"></div>
-    </section>
-  </div>
+    <div class="section-label"><span>Perfil do Operador e Preferências</span></div>
+    <div class="card">
+      <div class="field">
+        <label for="cfgOperador">Nome do Operador</label>
+        <input id="cfgOperador" placeholder="Ex.: João Silva">
+      </div>
+      <div class="field">
+        <label for="cfgDeposito">Unidade / Centro de Distribuição</label>
+        <input id="cfgDeposito" placeholder="Ex.: CD Principal · Matriz">
+      </div>
+      <div class="field">
+        <label for="cfgDiasAlerta">Alerta de vencimento próximo (dias)</label>
+        <input id="cfgDiasAlerta" type="number" inputmode="numeric" min="1" max="365" value="30">
+      </div>
+      <div class="toggle-row">
+        <div><strong>Bip sonoro na leitura</strong><span>Sinal auditivo ao ler QR ou código de barras</span></div>
+        <label class="switch"><input type="checkbox" id="cfgSom" checked><span class="slider"></span></label>
+      </div>
+      <div class="toggle-row">
+        <div><strong>Resposta tátil (vibração)</strong><span>Feedback físico em leituras e confirmações</span></div>
+        <label class="switch"><input type="checkbox" id="cfgVibracao" checked><span class="slider"></span></label>
+      </div>
+      <button class="btn" id="btnSalvarConfig">Salvar Configurações</button>
+    </div>
 
-  <div id="screen-produtos" class="screen">
-    <div class="screen-title"><button class="back-btn" data-screen="menu">Voltar</button><h2>Produtos cadastrados</h2></div>
-    <section><h2>Catálogo de Produtos</h2><label>Número, código de barras ou nome</label><input id="prodFiltro" placeholder="Opcional"><button id="consultarProdutos">Consultar produtos</button><div id="produtosResultado"></div></section>
-  </div>
+    <div class="section-label"><span>Ambiente e Manutenção</span></div>
+    <div class="card">
+      <button class="btn btn-outline" id="btnSeedDemo">Carregar Dados de Demonstração</button>
+      <button class="btn btn-danger-outline" id="btnClearDb">Zerar Base de Dados Local</button>
+      <p style="margin:12px 0 0;font-size:11px;color:var(--muted);text-align:center">MyStock WMS Enterprise Standalone · v2.0.0 · SQLite Local Engine</p>
+    </div>
+  </section>
 
-  <div id="screen-entrada" class="screen">
-    <div class="screen-title"><button class="back-btn" data-screen="menu">Voltar</button><h2>Registrar entrada</h2></div>
-    <section>
-      <h2>Entrada no Estoque</h2>
-      <label>Número do produto</label><input id="entNumero" inputmode="numeric" placeholder="Ex.: 3000281">
-      <div id="readerEntrada"></div><button id="startScannerEntrada" class="secondary">Ler QR / código de barras</button><div id="scanEntradaMsg" class="msg"></div>
-      <label>Lote</label><input id="entLote" inputmode="numeric" placeholder="Ex.: 30010281">
-      <button id="abrirLotesEntrada" class="secondary">Selecionar lote cadastrado</button>
-      <div id="lotesEntradaPopup" class="popup-panel"><div class="popup-content"><h2>Lotes do produto</h2><button id="fecharLotesEntrada" class="danger">Fechar</button><div id="lotesEntradaLista"></div></div></div>
-      <label>Endereço</label><input id="entEndereco" placeholder="Ex.: A01-R01-N01">
-      <button id="verEnderecosEntrada" class="secondary">Ver endereços disponíveis</button>
-      <div id="enderecosEntrada" class="popup-panel">
-        <div class="popup-content">
-          <h2>Endereços disponíveis</h2>
-          <button id="fecharEnderecosEntradaPopup" class="danger">Fechar</button>
-          <div id="enderecosEntradaResultado"></div>
+  <!-- ==================== SUB-TELA: CADASTRAR PRODUTO ==================== -->
+  <section id="screen-cadastro" class="screen">
+    <div class="sub-header">
+      <div class="sub-header-left">
+        <button class="btn-back" data-back="catalogo"><svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg></button>
+        <div class="sub-title-group"><h2 class="sub-title">Cadastrar Produto / Lote</h2><p class="sub-subtitle">Novo SKU ou novo lote para SKU existente</p></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="field-row">
+        <div class="field">
+          <label for="cadNumero">Código / Número *</label>
+          <input id="cadNumero" placeholder="Ex.: 3000281">
+        </div>
+        <div class="field">
+          <label for="cadEstoqueMin">Estoque Mínimo</label>
+          <input id="cadEstoqueMin" type="number" inputmode="numeric" min="0" placeholder="0">
         </div>
       </div>
-      <label>Quantidade de entrada</label><input id="entQuantidade" inputmode="numeric" placeholder="Ex.: 9960">
-      <button id="salvarEntrada">Registrar entrada</button><div id="entMsg" class="msg"></div>
-    </section>
-  </div>
+      <div class="field">
+        <label for="cadCodigoBarras">Código de Barras / QR Code</label>
+        <div class="input-group">
+          <input id="cadCodigoBarras" placeholder="Bipe ou digite (opcional)">
+          <button class="btn-scan-inline" id="btnScanCadastro"><svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 7V5a2 2 0 012-2h2M17 3h2a2 2 0 012 2v2M21 17v2a2 2 0 01-2 2h-2M7 21H5a2 2 0 01-2-2v-2M7 12h10"/></svg></button>
+        </div>
+      </div>
+      <div class="field">
+        <label for="cadNome">Descrição do Produto *</label>
+        <input id="cadNome" placeholder="Ex.: Amoxicilina 500mg cx/60">
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label for="cadLote">Lote *</label>
+          <input id="cadLote" placeholder="Ex.: LT-2601A">
+        </div>
+        <div class="field">
+          <label for="cadQc">Unidades / Caixa (QC) *</label>
+          <input id="cadQc" type="number" inputmode="numeric" min="1" placeholder="Ex.: 60">
+        </div>
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label for="cadFabricacao">Fabricação *</label>
+          <input id="cadFabricacao" inputmode="numeric" placeholder="DD/MM/AAAA">
+        </div>
+        <div class="field">
+          <label for="cadVencimento">Vencimento *</label>
+          <input id="cadVencimento" inputmode="numeric" placeholder="DD/MM/AAAA">
+        </div>
+      </div>
+      <div class="section-label" style="margin-top:12px"><span>Endereçamento Inicial (Opcional)</span></div>
+      <div class="field-row">
+        <div class="field">
+          <label for="cadQtdInicial">Qtd. Inicial (un.)</label>
+          <input id="cadQtdInicial" type="number" inputmode="numeric" min="0" placeholder="Opcional">
+        </div>
+        <div class="field">
+          <label for="cadEndereco">Endereço</label>
+          <input id="cadEndereco" readonly placeholder="Selecione abaixo">
+        </div>
+      </div>
+      <button class="btn btn-outline" id="btnPickEndCad">Selecionar Endereço Disponível</button>
+      <button class="btn" id="btnSalvarCadastro">Salvar Produto e Lote</button>
+      <div id="cadMsg" class="msg"></div>
+    </div>
+  </section>
 
-  <div id="screen-enderecos" class="screen">
-    <div class="screen-title"><button class="back-btn" data-screen="menu">Voltar</button><h2>Endereços e capacidade</h2></div>
-    <section><h2>Cadastrar / Ajustar Endereço</h2><label>Endereço</label><input id="endCodigo" placeholder="Ex.: A01-R01-N01"><label>Limite máximo em unidades</label><input id="endCapacidade" inputmode="numeric" placeholder="Ex.: 12000"><button id="salvarEndereco">Salvar endereço</button><div id="endMsg" class="msg"></div></section>
-    <section><h2>Mapa de Endereços</h2><button id="consultarEnderecos">Consultar endereços</button><div id="enderecosPopup" class="popup-panel"><div class="popup-content"><h2>Endereços cadastrados</h2><button id="fecharEnderecosPopup" class="danger">Fechar</button><div id="enderecosResultado"></div></div></div></section>
-  </div>
+  <!-- ==================== SUB-TELA: ENDEREÇOS & MAPA ==================== -->
+  <section id="screen-enderecos" class="screen">
+    <div class="sub-header">
+      <div class="sub-header-left">
+        <button class="btn-back" data-back="catalogo"><svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg></button>
+        <div class="sub-title-group"><h2 class="sub-title">Endereços e Capacidade</h2><p class="sub-subtitle">Mapa físico e limites do armazém</p></div>
+      </div>
+    </div>
+    <div class="card">
+      <h3 class="card-title" style="margin-bottom:10px">Novo / Atualizar Endereço</h3>
+      <div class="field-row">
+        <div class="field">
+          <label for="endCodigo">Código do Endereço *</label>
+          <input id="endCodigo" placeholder="Ex.: A01-R01-N01" style="text-transform:uppercase">
+        </div>
+        <div class="field">
+          <label for="endCapacidade">Capacidade (un.) *</label>
+          <input id="endCapacidade" type="number" inputmode="numeric" min="1" placeholder="Ex.: 5000">
+        </div>
+      </div>
+      <button class="btn" id="btnSalvarEndereco">Salvar Endereço</button>
+      <div id="endMsg" class="msg"></div>
+    </div>
 
-  <div id="screen-endereco-detalhe" class="screen">
-    <div class="screen-title"><button class="back-btn" data-screen="enderecos">Voltar</button><h2>Detalhe do endereço</h2></div>
-    <section><h2>Capacidade do Endereço</h2><div id="endDetalheResumo"></div><label>Nova capacidade máxima</label><input id="endDetalheCapacidade" inputmode="numeric"><button id="salvarEnderecoDetalhe">Salvar nova capacidade</button><div id="endDetalheMsg" class="msg"></div></section>
-  </div>
+    <div class="chip-bar" id="endFilterChips">
+      <button class="chip active" data-end-filter="todos">Todos</button>
+      <button class="chip" data-end-filter="disponiveis">Com espaço</button>
+      <button class="chip" data-end-filter="lotados">Lotados</button>
+      <button class="chip" data-end-filter="vazios">Vazios</button>
+    </div>
+    <div id="enderecosLista" class="data-list"></div>
+  </section>
 
-  <div id="screen-estoque" class="screen">
-    <div class="screen-title"><button class="back-btn" data-screen="menu">Voltar</button><h2>Consultar estoque</h2></div>
-    <section><h2>Filtro</h2><div id="readerEstoque"></div><button id="startScannerEstoque">Abrir câmera</button><div id="scanEstoqueMsg" class="msg"></div><label>Número do produto</label><input id="estNumero" inputmode="numeric" placeholder="Opcional"><button id="consultarEstoque">Consultar</button><div id="estoqueResultado"></div></section>
-  </div>
+  <!-- ==================== SUB-TELA: DETALHE DO ENDEREÇO ==================== -->
+  <section id="screen-endereco-detalhe" class="screen">
+    <div class="sub-header">
+      <div class="sub-header-left">
+        <button class="btn-back" data-back="enderecos"><svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg></button>
+        <div class="sub-title-group"><h2 class="sub-title" id="endDetTitulo">Endereço</h2><p class="sub-subtitle">Ocupação, capacidade e saldos</p></div>
+      </div>
+    </div>
+    <div class="card" id="endDetResumo"></div>
+    <div class="card">
+      <div class="field">
+        <label for="endDetCapInput">Ajustar Capacidade Máxima (un.)</label>
+        <input id="endDetCapInput" type="number" inputmode="numeric" min="1">
+      </div>
+      <div class="btn-row">
+        <button class="btn" id="btnSalvarEndDet">Atualizar Limite</button>
+        <button class="btn btn-danger-outline" id="btnExcluirEndDet" style="max-width:130px">Remover</button>
+      </div>
+      <div id="endDetMsg" class="msg"></div>
+    </div>
+    <div class="section-label"><span>Itens Armazenados Neste Endereço</span></div>
+    <div id="endDetItens" class="data-list"></div>
+  </section>
 
-  <div id="screen-separacao" class="screen">
-    <div class="screen-title"><button class="back-btn" data-screen="menu">Voltar</button><h2>Separação</h2></div>
-    <section><h2>Bipar Produto</h2><div id="reader"></div><button id="startScanner">Abrir câmera</button><div id="scanMsg" class="msg"></div></section>
-    <section><h2>Pedido do Cliente</h2><label>Número do produto</label><input id="produto" inputmode="numeric"><label>Quantidade solicitada</label><input id="quantidade" inputmode="numeric"><button id="buscar">Ver orientação</button><div id="resultado"></div></section>
-    <section id="confirmBox" style="display:none"><h2>Confirmar Separação</h2><div id="confirmItens"></div><button id="confirmar">Confirmar e baixar estoque</button><button id="cancelar" class="danger">Cancelar</button><div id="confirmMsg" class="msg"></div></section>
-  </div>
+  <!-- ==================== SUB-TELA: REGISTRAR ENTRADA ==================== -->
+  <section id="screen-entrada" class="screen">
+    <div class="sub-header">
+      <div class="sub-header-left">
+        <button class="btn-back" data-back="operacoes"><svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg></button>
+        <div class="sub-title-group"><h2 class="sub-title">Registrar Entrada</h2><p class="sub-subtitle">Recebimento e endereçamento (Putaway)</p></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="field">
+        <label for="entNumero">Produto (Código ou Barras) *</label>
+        <div class="input-group">
+          <input id="entNumero" placeholder="Bipe ou digite o código">
+          <button class="btn-scan-inline" id="btnScanEntrada"><svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 7V5a2 2 0 012-2h2M17 3h2a2 2 0 012 2v2M21 17v2a2 2 0 01-2 2h-2M7 21H5a2 2 0 01-2-2v-2M7 12h10"/></svg></button>
+        </div>
+      </div>
+      <div class="field">
+        <label for="entLote">Lote *</label>
+        <div class="input-group">
+          <input id="entLote" placeholder="Selecione ou digite o lote">
+          <button class="btn btn-outline btn-sm" id="btnPickLoteEnt">Lotes</button>
+        </div>
+      </div>
+      <div class="field">
+        <label for="entEndereco">Endereço de Destino *</label>
+        <div class="input-group">
+          <input id="entEndereco" placeholder="Ex.: A01-R01-N01" style="text-transform:uppercase">
+          <button class="btn btn-outline btn-sm" id="btnPickEndEnt">Livres</button>
+        </div>
+      </div>
 
-  <div id="screen-movimentacoes" class="screen">
-    <div class="screen-title"><button class="back-btn" data-screen="menu">Voltar</button><h2>Movimentações</h2></div>
-    <section><h2>Histórico Operacional</h2><label>Número do produto</label><input id="movNumero" inputmode="numeric" placeholder="Opcional"><button id="consultarMovimentacoes">Consultar movimentações</button><div id="movResultado"></div></section>
-  </div>
+      <div id="entCalcStrip" class="calc-strip" style="display:none">
+        <span>QC do lote: <strong id="entQcInfo">0</strong> un./cx</span>
+        <span id="entCaixasPreview" class="num">0 cx</span>
+      </div>
+
+      <div class="field-row">
+        <div class="field">
+          <label for="entCaixas">Qtd. em Caixas (opcional)</label>
+          <input id="entCaixas" type="number" inputmode="numeric" min="0" placeholder="Ex.: 10">
+        </div>
+        <div class="field">
+          <label for="entQuantidade">Total em Unidades *</label>
+          <input id="entQuantidade" type="number" inputmode="numeric" min="1" placeholder="Ex.: 600">
+        </div>
+      </div>
+      <button class="btn btn-ok" id="btnSalvarEntrada">Confirmar Entrada no Estoque</button>
+      <div id="entMsg" class="msg"></div>
+    </div>
+  </section>
+
+  <!-- ==================== SUB-TELA: PEDIDOS / ORDENS ==================== -->
+  <section id="screen-pedidos" class="screen">
+    <div class="sub-header">
+      <div class="sub-header-left">
+        <button class="btn-back" data-back="operacoes"><svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg></button>
+        <div class="sub-title-group"><h2 class="sub-title">Ordens de Separação</h2><p class="sub-subtitle">Gestão de pedidos e remessas</p></div>
+      </div>
+      <button class="btn btn-sm" id="btnNovaOrdemToggle">+ Nova Ordem</button>
+    </div>
+
+    <div class="card" id="novaOrdemCard" style="display:none">
+      <div class="card-header">
+        <h3 class="card-title">Criar Nova Ordem</h3>
+        <button class="btn btn-outline btn-sm" id="btnFecharNovaOrdem">Cancelar</button>
+      </div>
+      <div class="field">
+        <label for="ordCliente">Cliente / Destinatário</label>
+        <input id="ordCliente" placeholder="Ex.: Unidade Central / Cliente XYZ">
+      </div>
+      <div class="field">
+        <label>Adicionar Produto à Ordem</label>
+        <div class="input-group">
+          <select id="ordProdSelect"></select>
+          <input id="ordProdQty" type="number" inputmode="numeric" min="1" placeholder="Qtd" style="max-width:96px">
+          <button class="btn btn-secondary btn-sm" id="btnAddOrdItem">+</button>
+        </div>
+      </div>
+      <div id="ordDraftItens" class="data-list" style="margin-bottom:10px"></div>
+      <button class="btn" id="btnCriarOrdem">Emitir Ordem de Separação</button>
+      <div id="ordMsg" class="msg"></div>
+    </div>
+
+    <div class="card">
+      <input id="ordFiltro" type="search" placeholder="Buscar por nº da ordem, cliente ou status...">
+    </div>
+    <div id="ordensLista" class="data-list"></div>
+  </section>
+
+  <!-- ==================== SUB-TELA: DETALHE DA ORDEM ==================== -->
+  <section id="screen-ordem-detalhe" class="screen">
+    <div class="sub-header">
+      <div class="sub-header-left">
+        <button class="btn-back" data-back="pedidos"><svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg></button>
+        <div class="sub-title-group"><h2 class="sub-title" id="ordDetNumero">Ordem</h2><p class="sub-subtitle" id="ordDetCliente"></p></div>
+      </div>
+      <span class="badge" id="ordDetStatus">PENDENTE</span>
+    </div>
+    <div class="card" id="ordDetResumo"></div>
+    <div class="section-label"><span>Itens do Pedido</span></div>
+    <div id="ordDetItens" class="data-list"></div>
+    <div id="ordDetFooterActions" style="margin-top:12px"></div>
+  </section>
+
+  <!-- ==================== SUB-TELA: SEPARAÇÃO FEFO ==================== -->
+  <section id="screen-separacao" class="screen">
+    <div class="sub-header">
+      <div class="sub-header-left">
+        <button class="btn-back" id="sepBackBtn" data-back="operacoes"><svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg></button>
+        <div class="sub-title-group"><h2 class="sub-title">Separação FEFO</h2><p class="sub-subtitle" id="sepContextSub">Prioridade automática por vencimento</p></div>
+      </div>
+    </div>
+
+    <div id="sepOrderBanner" class="msg info" style="margin-top:0;margin-bottom:10px"></div>
+
+    <div class="card">
+      <div class="field">
+        <label for="sepProduto">Produto (Código ou Barras) *</label>
+        <div class="input-group">
+          <input id="sepProduto" placeholder="Bipe ou digite o código">
+          <button class="btn-scan-inline" id="btnScanSep"><svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 7V5a2 2 0 012-2h2M17 3h2a2 2 0 012 2v2M21 17v2a2 2 0 01-2 2h-2M7 21H5a2 2 0 01-2-2v-2M7 12h10"/></svg></button>
+        </div>
+      </div>
+      <div class="field">
+        <label for="sepQuantidade">Quantidade Solicitada (unidades) *</label>
+        <input id="sepQuantidade" type="number" inputmode="numeric" min="1" placeholder="Ex.: 120">
+      </div>
+      <button class="btn" id="btnGerarOrientacao">Gerar Orientação FEFO</button>
+      <div id="sepErro" class="msg"></div>
+    </div>
+
+    <div id="sepConfirmBox" style="display:none">
+      <div class="section-label"><span>Orientação de Retirada</span><span class="badge ok">FEFO Ativo</span></div>
+      <div id="sepSummaryCard" class="card"></div>
+      <div id="sepItensContainer"></div>
+      <div class="btn-row">
+        <button class="btn btn-ok" id="btnConfirmarSep">Confirmar e Baixar Estoque</button>
+        <button class="btn btn-outline" id="btnCancelarSep" style="max-width:110px">Limpar</button>
+      </div>
+      <div id="sepConfirmMsg" class="msg"></div>
+    </div>
+  </section>
+
+  <!-- ==================== SUB-TELA: CHECKOUT FÍSICO ==================== -->
+  <section id="screen-checkout" class="screen">
+    <div class="sub-header">
+      <div class="sub-header-left">
+        <button class="btn-back" data-back="operacoes"><svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg></button>
+        <div class="sub-title-group"><h2 class="sub-title">Checkout de Expedição</h2><p class="sub-subtitle">Conferência física sem baixa duplicada</p></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="field">
+        <label for="chkOrdemSelect">Selecionar Ordem Concluída</label>
+        <div class="input-group">
+          <select id="chkOrdemSelect"></select>
+          <button class="btn btn-sm" id="btnCarregarCheckout">Abrir</button>
+        </div>
+      </div>
+      <div id="chkMsg" class="msg"></div>
+    </div>
+
+    <div id="chkWorkspace" style="display:none">
+      <div class="card" id="chkHeaderCard"></div>
+      <div class="card" id="chkScanCard" style="display:none">
+        <div class="field">
+          <label for="chkCodigoCaixa">Bipar / Informar Caixa (padrão produto|lote)</label>
+          <div class="input-group">
+            <input id="chkCodigoCaixa" placeholder="Ex.: 3000281|LT-2601A">
+            <button class="btn-scan-inline" id="btnScanCheckout"><svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 7V5a2 2 0 012-2h2M17 3h2a2 2 0 012 2v2M21 17v2a2 2 0 01-2 2h-2M7 21H5a2 2 0 01-2-2v-2M7 12h10"/></svg></button>
+          </div>
+        </div>
+        <button class="btn btn-secondary" id="btnBiparCaixa">Confirmar Caixa Bipada</button>
+      </div>
+      <div id="chkProgressoLista" class="data-list"></div>
+      <div id="chkFooterBox" style="margin-top:12px"></div>
+    </div>
+  </section>
+
+  <!-- ==================== SUB-TELA: TRANSFERÊNCIAS & TAREFAS ==================== -->
+  <section id="screen-transferencia" class="screen">
+    <div class="sub-header">
+      <div class="sub-header-left">
+        <button class="btn-back" data-back="operacoes"><svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg></button>
+        <div class="sub-title-group"><h2 class="sub-title">Transferências e Tarefas</h2><p class="sub-subtitle">Remanejamento entre endereços físicos</p></div>
+      </div>
+    </div>
+
+    <div class="chip-bar" id="transModeChips">
+      <button class="chip active" data-trans-tab="direta">Transferência Direta</button>
+      <button class="chip" data-trans-tab="tarefas">Tarefas Programadas</button>
+    </div>
+
+    <div id="transTabDireta">
+      <div class="card">
+        <div class="field">
+          <label for="trNumero">Produto *</label>
+          <div class="input-group">
+            <input id="trNumero" placeholder="Código ou barras">
+            <button class="btn-scan-inline" id="btnScanTrans"><svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 7V5a2 2 0 012-2h2M17 3h2a2 2 0 012 2v2M21 17v2a2 2 0 01-2 2h-2M7 21H5a2 2 0 01-2-2v-2M7 12h10"/></svg></button>
+          </div>
+        </div>
+        <div class="field">
+          <label for="trLote">Lote *</label>
+          <div class="input-group">
+            <input id="trLote" placeholder="Lote">
+            <button class="btn btn-outline btn-sm" id="btnPickLoteTrans">Lotes</button>
+          </div>
+        </div>
+        <div class="field-row">
+          <div class="field">
+            <label for="trOrigem">Endereço Origem *</label>
+            <input id="trOrigem" placeholder="Ex.: A01-R01-N01" style="text-transform:uppercase">
+          </div>
+          <div class="field">
+            <label for="trDestino">Endereço Destino *</label>
+            <input id="trDestino" placeholder="Ex.: B01-R01-N02" style="text-transform:uppercase">
+          </div>
+        </div>
+        <button class="btn btn-outline" id="btnPickEndDestTrans" style="margin-top:0;margin-bottom:10px">Escolher Destino Disponível</button>
+        <div class="field">
+          <label for="trQuantidade">Quantidade (un.) *</label>
+          <input id="trQuantidade" type="number" inputmode="numeric" min="1" placeholder="Ex.: 120">
+        </div>
+        <div class="btn-row">
+          <button class="btn" id="btnExecutarTransDireta">Transferir Agora</button>
+          <button class="btn btn-outline" id="btnAgendarTarefa">Criar Tarefa</button>
+        </div>
+        <div id="trMsg" class="msg"></div>
+      </div>
+    </div>
+
+    <div id="transTabTarefas" style="display:none">
+      <div class="chip-bar" id="taskFilterChips">
+        <button class="chip active" data-task-status="">Todas</button>
+        <button class="chip" data-task-status="PENDENTE">Pendentes</button>
+        <button class="chip" data-task-status="CONCLUIDA">Concluídas</button>
+        <button class="chip" data-task-status="CANCELADA">Canceladas</button>
+      </div>
+      <div id="tarefasLista" class="data-list"></div>
+    </div>
+  </section>
+
+  <!-- ==================== SUB-TELA: INVENTÁRIO FÍSICO ==================== -->
+  <section id="screen-inventario" class="screen">
+    <div class="sub-header">
+      <div class="sub-header-left">
+        <button class="btn-back" data-back="operacoes"><svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg></button>
+        <div class="sub-title-group"><h2 class="sub-title">Inventário Físico</h2><p class="sub-subtitle">Conferência cíclica com registro de divergência</p></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="field">
+        <label for="invNumero">Produto (Código ou Barras) *</label>
+        <div class="input-group">
+          <input id="invNumero" placeholder="Bipe ou digite">
+          <button class="btn-scan-inline" id="btnScanInv"><svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 7V5a2 2 0 012-2h2M17 3h2a2 2 0 012 2v2M21 17v2a2 2 0 01-2 2h-2M7 21H5a2 2 0 01-2-2v-2M7 12h10"/></svg></button>
+        </div>
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label for="invLote">Lote *</label>
+          <input id="invLote" placeholder="Lote contado">
+        </div>
+        <div class="field">
+          <label for="invEndereco">Endereço *</label>
+          <input id="invEndereco" placeholder="Ex.: A01-R01-N01" style="text-transform:uppercase">
+        </div>
+      </div>
+      <div id="invSystemPreview" class="delta-box" style="display:none">
+        <span>Saldo no sistema: <strong class="num" id="invSysQty">0</strong> un.</span>
+        <span id="invDeltaLabel" class="num"></span>
+      </div>
+      <div class="field">
+        <label for="invQtd">Quantidade Física Contada (un.) *</label>
+        <input id="invQtd" type="number" inputmode="numeric" min="0" placeholder="Ex.: 1500">
+      </div>
+      <button class="btn" id="btnSalvarInventario">Registrar Contagem e Ajustar</button>
+      <div id="invMsg" class="msg"></div>
+    </div>
+  </section>
+
+  <!-- ==================== SUB-TELA: ALERTAS OPERACIONAIS ==================== -->
+  <section id="screen-alertas" class="screen">
+    <div class="sub-header">
+      <div class="sub-header-left">
+        <button class="btn-back" data-back="dashboard"><svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg></button>
+        <div class="sub-title-group"><h2 class="sub-title">Alertas Operacionais</h2><p class="sub-subtitle">Vencimentos e estoque mínimo</p></div>
+      </div>
+      <button class="btn btn-outline btn-sm" id="btnAtualizarAlertas">Atualizar</button>
+    </div>
+    <div class="chip-bar" id="alertFilterChips">
+      <button class="chip active" data-alert-filter="TODOS">Todos</button>
+      <button class="chip" data-alert-filter="VENCIDO">Vencidos</button>
+      <button class="chip" data-alert-filter="VENCIMENTO_PROXIMO">Próx. Vencimento</button>
+      <button class="chip" data-alert-filter="ESTOQUE_MINIMO">Estoque Mínimo</button>
+    </div>
+    <div id="alertasLista" class="data-list"></div>
+  </section>
+
+  <!-- ==================== SUB-TELA: HISTÓRICO / AUDITORIA ==================== -->
+  <section id="screen-movimentacoes" class="screen">
+    <div class="sub-header">
+      <div class="sub-header-left">
+        <button class="btn-back" data-back="gestao"><svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg></button>
+        <div class="sub-title-group"><h2 class="sub-title">Histórico de Movimentações</h2><p class="sub-subtitle">Trilha completa de auditoria local</p></div>
+      </div>
+    </div>
+    <div class="card">
+      <input id="movFiltro" type="search" placeholder="Filtrar por produto, lote ou endereço...">
+    </div>
+    <div class="chip-bar" id="movFilterChips">
+      <button class="chip active" data-mov-type="TODOS">Todos</button>
+      <button class="chip" data-mov-type="ENTRADA">Entradas</button>
+      <button class="chip" data-mov-type="SAIDA">Saídas</button>
+      <button class="chip" data-mov-type="TRANSFERENCIA">Transferências</button>
+      <button class="chip" data-mov-type="INVENTARIO">Inventário</button>
+    </div>
+    <div id="movLista" class="data-list"></div>
+  </section>
+
 </main>
 
-<script>
-let scanner=null, scannerCadastro=null, scannerEntrada=null, scannerEstoque=null;
-let currentPreview=null, enderecosCache=[], enderecoDetalheAtual=null;
-const $ = id => document.getElementById(id);
-const esc = v => String(v ?? "").replace(/[&<>"']/g, ch => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[ch]));
+<!-- ==================== FIXED BOTTOM NAV ==================== -->
+<nav class="bottom-nav" aria-label="Navegação Principal">
+  <button class="nav-item active" data-nav="dashboard">
+    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
+    <span>Painel</span>
+  </button>
+  <button class="nav-item" data-nav="operacoes">
+    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
+    <span>Operações</span>
+  </button>
+  <button class="nav-item" data-nav="estoque">
+    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg>
+    <span>Estoque</span>
+  </button>
+  <button class="nav-item" data-nav="catalogo">
+    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/></svg>
+    <span>Catálogo</span>
+  </button>
+  <button class="nav-item" data-nav="gestao">
+    <span class="nav-badge" id="navAlertBadge">0</span>
+    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+    <span>Gestão</span>
+  </button>
+</nav>
 
-function call(name, payload="") { 
-  if (!window.MyStock || typeof window.MyStock[name] !== "function") {
-    throw new Error(`Função ${name} não encontrada no ambiente MyStock.`);
-  }
-  const raw = typeof payload === "string" ? window.MyStock[name](payload) : window.MyStock[name](JSON.stringify(payload)); 
-  const data = JSON.parse(raw); 
-  if (!data.ok) throw new Error(data.error || "Falha na operação."); 
-  return data; 
-}
+<!-- ==================== UNIFIED SCANNER MODAL ==================== -->
+<div id="scannerModal" class="modal-backdrop">
+  <div class="sheet">
+    <div class="sheet-header">
+      <h3 id="scannerTitle">Leitor de Código / QR</h3>
+      <button class="sheet-close" id="btnCloseScanner">&times;</button>
+    </div>
+    <div class="sheet-body">
+      <div id="scannerReader"></div>
+      <div id="scannerStatusMsg" class="msg"></div>
+      <p class="scanner-hint">Aponte a câmera para o código de barras ou QR Code. Leitura 100% offline.</p>
+    </div>
+  </div>
+</div>
 
-/* CARREGAR DADOS REAIS DO SQLITE PARA OS KPIS */
-function atualizarDashboardKPIs() {
-  try {
-    const dadosEnderecos = call("listarEnderecos", "false");
-    const itensEnderecos = dadosEnderecos.itens || [];
-    
-    let totalCapacidade = 0;
-    let totalOcupado = 0;
-    let enderecosDisponiveis = 0;
+<!-- ==================== UNIFIED PICKER SHEET ==================== -->
+<div id="pickerModal" class="modal-backdrop">
+  <div class="sheet">
+    <div class="sheet-header">
+      <h3 id="pickerTitle">Selecionar</h3>
+      <button class="sheet-close" id="btnClosePicker">&times;</button>
+    </div>
+    <div class="sheet-body" id="pickerBody"></div>
+  </div>
+</div>
 
-    itensEnderecos.forEach(end => {
-      const cap = Number(end.capacidade_maxima || 0);
-      const ocu = Number(end.ocupado || 0);
-      totalCapacidade += cap;
-      totalOcupado += ocu;
-      if (Number(end.disponivel || 0) > 0) {
-        enderecosDisponiveis++;
-      }
-    });
+<!-- ==================== EDIT PRODUCT MODAL ==================== -->
+<div id="editProdModal" class="modal-backdrop">
+  <div class="sheet">
+    <div class="sheet-header">
+      <h3>Editar Produto / Lote</h3>
+      <button class="sheet-close" id="btnCloseEditProd">&times;</button>
+    </div>
+    <div class="sheet-body">
+      <input type="hidden" id="editProdId">
+      <input type="hidden" id="editLoteId">
+      <div class="field-row">
+        <div class="field"><label for="editNumero">Código *</label><input id="editNumero"></div>
+        <div class="field"><label for="editEstoqueMin">Est. Mínimo</label><input id="editEstoqueMin" type="number" inputmode="numeric" min="0"></div>
+      </div>
+      <div class="field"><label for="editCodigoBarras">Código de Barras / QR</label><input id="editCodigoBarras"></div>
+      <div class="field"><label for="editNome">Descrição *</label><input id="editNome"></div>
+      <div class="field-row">
+        <div class="field"><label for="editLote">Lote *</label><input id="editLote"></div>
+        <div class="field"><label for="editQc">Un./Caixa (QC) *</label><input id="editQc" type="number" inputmode="numeric" min="1"></div>
+      </div>
+      <div class="field-row">
+        <div class="field"><label for="editFab">Fabricação *</label><input id="editFab" inputmode="numeric"></div>
+        <div class="field"><label for="editVenc">Vencimento *</label><input id="editVenc" inputmode="numeric"></div>
+      </div>
+      <button class="btn" id="btnSalvarEditProd">Salvar Alterações</button>
+      <div id="editProdMsg" class="msg"></div>
+    </div>
+  </div>
+</div>
 
-    const taxaOcupacao = totalCapacidade > 0 ? Math.round((totalOcupado / totalCapacidade) * 100) : 0;
-    
-    $("kpiOcupacao").textContent = `${taxaOcupacao}%`;
-    $("kpiOcupacaoSub").textContent = `${totalOcupado} / ${totalCapacidade} un`;
-    $("kpiEnderecos").textContent = enderecosDisponiveis;
+<!-- ==================== CONFIRM DIALOG MODAL ==================== -->
+<div id="confirmModal" class="modal-backdrop center">
+  <div class="sheet">
+    <div class="sheet-header">
+      <h3 id="confirmTitle">Confirmar ação</h3>
+      <button class="sheet-close" id="btnCloseConfirm">&times;</button>
+    </div>
+    <div class="sheet-body">
+      <p id="confirmBody" style="margin:0 0 14px;font-size:13.5px;color:var(--slate-700)"></p>
+      <div id="confirmPromptWrap" style="display:none;margin-bottom:12px">
+        <label id="confirmPromptLabel" style="display:block;font-size:12px;font-weight:700;margin-bottom:5px"></label>
+        <input id="confirmPromptInput" inputmode="numeric">
+      </div>
+      <div class="btn-row">
+        <button class="btn btn-outline" id="btnConfirmCancel">Cancelar</button>
+        <button class="btn" id="btnConfirmOk">Confirmar</button>
+      </div>
+    </div>
+  </div>
+</div>
 
-    const dadosMov = call("listarMovimentacoes", "");
-    const itensMov = dadosMov.itens || [];
-    $("kpiMovs").textContent = itensMov.length;
-
-  } catch (e) {
-    $("kpiOcupacao").textContent = "0%";
-    $("kpiEnderecos").textContent = "0";
-    $("kpiMovs").textContent = "0";
-  }
-}
-
-function filtrarAba(grupo, btn) {
-  document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
-  btn.classList.add("active");
-
-  document.querySelectorAll(".process-group").forEach(g => {
-    if (grupo === "todos" || g.dataset.group === grupo) {
-      g.style.display = "block";
-    } else {
-      g.style.display = "none";
-    }
-  });
-}
-
-function filtrarDashboard() {
-  const termo = $("dashSearch").value.toLowerCase();
-  document.querySelectorAll(".menu-card").forEach(card => {
-    const texto = card.textContent.toLowerCase();
-    card.style.display = texto.includes(termo) ? "flex" : "none";
-  });
-}
-
-function limparTelaOperacional(){
-  document.querySelectorAll(".popup-panel").forEach(el=>el.classList.remove("open"));
-  document.querySelectorAll(".screen input").forEach(el=>{ el.value=""; });
-  [
-    "cadMsg","scanCadastroMsg","cadEnderecosLista", "produtosResultado",
-    "entMsg","scanEntradaMsg","lotesEntradaLista","enderecosEntradaResultado",
-    "endMsg","enderecosResultado", "endDetalheResumo","endDetalheMsg",
-    "scanEstoqueMsg","estoqueResultado", "scanMsg","resultado","confirmItens","confirmMsg", "movResultado"
-  ].forEach(id=>{
-    const el=$(id);
-    if(el){
-      el.innerHTML="";
-      if(el.classList.contains("msg")) el.className="msg";
-    }
-  });
-
-  if($("confirmBox")) $("confirmBox").style.display="none";
-  if($("confirmar")) $("confirmar").disabled=false;
-  if($("cancelar")) $("cancelar").disabled=false;
-
-  currentPreview=null;
-  enderecoDetalheAtual=null;
-  enderecosCache=[];
-
-  ["reader","readerCadastro","readerEntrada","readerEstoque"].forEach(id=>{
-    const el=$(id);
-    if(el) el.innerHTML="";
-  });
-
-  [
-    ["scanner", s=>scanner=s],
-    ["scannerCadastro", s=>scannerCadastro=s],
-    ["scannerEntrada", s=>scannerEntrada=s],
-    ["scannerEstoque", s=>scannerEstoque=s]
-  ].forEach(([nome,atribuir])=>{
-    const sc=({ scanner, scannerCadastro, scannerEntrada, scannerEstoque })[nome];
-    if(sc){
-      atribuir(null);
-      try{ sc.stop().then(()=>{ try{sc.clear();}catch(e){} }).catch(()=>{ try{sc.clear();}catch(e){} }); }catch(e){}
-    }
-  });
-}
-
-function showScreen(name){
-  if(name==="menu") {
-    limparTelaOperacional();
-    atualizarDashboardKPIs();
-  }
-
-  document.querySelectorAll(".screen").forEach(e=>e.classList.remove("active"));
-  const destino=$(`screen-${name}`);
-  if(!destino) return;
-  destino.classList.add("active");
-  scrollTo(0,0);
-}
-
-function showMsg(el,text,ok=true){ el.textContent=text; el.className=ok?"msg ok":"msg err"; }
-function clearMsg(el){ el.textContent=""; el.className="msg"; }
-function dateMask(v){ const d=String(v||"").replace(/\D/g,"").slice(0,8); if(d.length<=2)return d; if(d.length<=4)return `${d.slice(0,2)}/${d.slice(2)}`; return `${d.slice(0,2)}/${d.slice(2,4)}/${d.slice(4)}`; }
-function attachDateMask(id){ $(id).addEventListener("input",()=>$(id).value=dateMask($(id).value)); }
-let contextoAudioMyStock=null;
-function prepararAudioMyStock(){
-  try{
-    const AudioCtx=window.AudioContext||window.webkitAudioContext;
-    if(!AudioCtx)return;
-    if(!contextoAudioMyStock)contextoAudioMyStock=new AudioCtx();
-    if(contextoAudioMyStock.state==="suspended")contextoAudioMyStock.resume();
-  }catch(e){}
-}
-function bipLeituraMyStock(){
-  try{
-    prepararAudioMyStock();
-    if(!contextoAudioMyStock)return;
-    const ctx=contextoAudioMyStock;
-    const oscilador=ctx.createOscillator();
-    const volume=ctx.createGain();
-    oscilador.type="sine";
-    oscilador.frequency.setValueAtTime(1800,ctx.currentTime);
-    volume.gain.setValueAtTime(0.0001,ctx.currentTime);
-    volume.gain.exponentialRampToValueAtTime(1.0,ctx.currentTime+0.015);
-    volume.gain.exponentialRampToValueAtTime(0.0001,ctx.currentTime+0.13);
-    oscilador.connect(volume);
-    volume.connect(ctx.destination);
-    oscilador.start(ctx.currentTime);
-    oscilador.stop(ctx.currentTime+0.14);
-  }catch(e){}
-}
-function formats(){ return window.Html5QrcodeSupportedFormats ? [Html5QrcodeSupportedFormats.QR_CODE,Html5QrcodeSupportedFormats.CODE_128,Html5QrcodeSupportedFormats.CODE_39,Html5QrcodeSupportedFormats.EAN_13,Html5QrcodeSupportedFormats.EAN_8,Html5QrcodeSupportedFormats.ITF] : undefined; }
-async function scan(targetReader,targetInput,targetMsg,scannerSetter,startButton,after){ prepararAudioMyStock(); clearMsg(targetMsg); if(!window.Html5Qrcode){ showMsg(targetMsg,"Leitor não carregou. Verifique a internet.",false); return; } const sc=new Html5Qrcode(targetReader.id); scannerSetter(sc); try{ await sc.start({facingMode:"environment"},{fps:10,qrbox:{width:240,height:160},formatsToSupport:formats()},async text=>{ bipLeituraMyStock(); targetInput.value=String(text||"").trim(); showMsg(targetMsg,`Código lido: ${targetInput.value}`,true); await sc.stop(); sc.clear(); startButton.disabled=false; scannerSetter(null); if(after) after(); }); startButton.disabled=true; }catch(e){ showMsg(targetMsg,"Não consegui abrir a câmera. Permita o acesso à câmera.",false); startButton.disabled=false; scannerSetter(null); } }
-function renderItems(container, itens, tpl, empty="Nenhum registro encontrado."){ container.innerHTML = itens.length ? itens.map(tpl).join("") : `<div class="msg err">${empty}</div>`; }
-
-function salvarCadastro(){ clearMsg($("cadMsg")); try{ const data=call("salvarProduto",{numero:$("cadNumero").value.trim(),codigo_barras:$("cadCodigoBarras").value.trim(),nome:$("cadNome").value.trim(),lote:$("cadLote").value.trim(),unidades_por_caixa:parseInt($("cadQc").value,10),fabricacao:$("cadFabricacao").value.trim(),vencimento:$("cadVencimento").value.trim(),endereco:$("cadEndereco").value.trim().toUpperCase(),quantidade_entrada:parseInt($("cadQuantidadeEntrada").value||"0",10)}); showMsg($("cadMsg"),data.message,true); }catch(e){ showMsg($("cadMsg"),e.message,false); } }
-function consultarProdutos(){ try{ const data=call("listarProdutos",$("prodFiltro").value.trim()); renderItems($("produtosResultado"),data.itens,item=>`<div class="item"><div class="line"><b>${esc(item.numero)} - ${esc(item.nome)}</b></div>${item.codigo_barras?`<div class="line"><b>QR / código:</b> ${esc(item.codigo_barras)}</div>`:""}<div class="line"><b>Lote:</b> ${esc(item.lote)}</div><div class="line"><b>QC:</b> ${esc(item.unidades_por_caixa)} unidade(s)</div><div class="line"><b>Fabricação:</b> ${esc(item.fabricacao)}</div><div class="line"><b>Vencimento:</b> ${esc(item.vencimento)}</div><span class="strong">Saldo total do lote: ${esc(item.saldo_total)} unidade(s)</span></div>`); }catch(e){ $("produtosResultado").innerHTML=`<div class="msg err">${esc(e.message)}</div>`; } }
-function salvarEntrada(){ clearMsg($("entMsg")); try{ const data=call("registrarEntrada",{numero:$("entNumero").value.trim(),lote:$("entLote").value.trim(),endereco:$("entEndereco").value.trim().toUpperCase(),quantidade:parseInt($("entQuantidade").value,10)}); showMsg($("entMsg"),data.message,true); }catch(e){ showMsg($("entMsg"),e.message,false); } }
-function abrirLotesEntrada(){ clearMsg($("entMsg")); const produto=$("entNumero").value.trim(); if(!produto){ showMsg($("entMsg"),"Informe o produto antes de selecionar o lote.",false); return; } $("lotesEntradaPopup").classList.add("open"); try{ const data=call("listarLotes",produto); renderItems($("lotesEntradaLista"),data.itens,item=>`<div class="item"><div class="line"><b>${esc(item.numero)} - ${esc(item.nome)}</b></div><div class="line"><b>Lote:</b> ${esc(item.lote)}</div><div class="line"><b>QC:</b> ${esc(item.unidades_por_caixa)}</div><div class="line"><b>Fabricação:</b> ${esc(item.fabricacao)}</div><div class="line"><b>Vencimento:</b> ${esc(item.vencimento)}</div><button class="secondary escolher-lote" data-lote="${esc(item.lote)}">Usar este lote</button></div>`); document.querySelectorAll(".escolher-lote").forEach(b=>b.onclick=()=>{ $("entLote").value=b.dataset.lote; $("lotesEntradaPopup").classList.remove("open"); showMsg($("entMsg"),`Lote selecionado: ${b.dataset.lote}`,true); }); }catch(e){ $("lotesEntradaLista").innerHTML=`<div class="msg err">${esc(e.message)}</div>`; } }
-function renderEnderecos(container,itens,selectable=false){ renderItems(container,itens,(item,idx)=>`<div class="item"><div class="line"><b>Endereço:</b> ${esc(item.codigo)}</div><div class="line"><b>Ocupado:</b> ${esc(item.ocupado)}</div><div class="line"><b>Limite:</b> ${esc(item.capacidade_maxima)}</div><span class="strong">Disponível: ${esc(item.disponivel)}</span>${selectable?`<button class="secondary escolher-endereco" data-codigo="${esc(item.codigo)}">Usar este endereço</button>`:`<button class="secondary editar-endereco" data-index="${idx}">Abrir / editar capacidade</button>`}</div>`); if(selectable){ document.querySelectorAll(".escolher-endereco").forEach(b=>b.onclick=()=>{ $("entEndereco").value=b.dataset.codigo; $("enderecosEntrada").classList.remove("open"); showMsg($("entMsg"),`Endereço selecionado: ${b.dataset.codigo}`,true); }); } else { enderecosCache=itens; document.querySelectorAll(".editar-endereco").forEach(b=>b.onclick=()=>{ $("enderecosPopup").classList.remove("open"); abrirDetalheEndereco(enderecosCache[parseInt(b.dataset.index,10)]); }); } }
-function abrirEnderecosCadastro(){ $("cadEnderecosPopup").classList.add("open"); try{ const data=call("listarEnderecos","true"); renderItems($("cadEnderecosLista"),data.itens,item=>`<div class="item"><div class="line"><b>Endereço:</b> ${esc(item.codigo)}</div><span class="strong">Disponível: ${esc(item.disponivel)}</span><button class="secondary cad-end" data-codigo="${esc(item.codigo)}">Usar este endereço</button></div>`); document.querySelectorAll(".cad-end").forEach(b=>b.onclick=()=>{ $("cadEndereco").value=b.dataset.codigo; $("cadEnderecosPopup").classList.remove("open"); showMsg($("cadMsg"),`Endereço selecionado: ${b.dataset.codigo}`,true); }); }catch(e){ $("cadEnderecosLista").innerHTML=`<div class="msg err">${esc(e.message)}</div>`; } }
-
-function consultarEnderecos(disponiveis = false) {
-  const popup = disponiveis ? $("enderecosEntrada") : $("enderecosPopup");
-  const container = disponiveis ? $("enderecosEntradaResultado") : $("enderecosResultado");
-
-  if (popup) popup.classList.add("open");
-  if (container) container.innerHTML = `<div class="msg">Carregando endereços...</div>`;
-
-  try {
-    const data = call("listarEnderecos", disponiveis ? "true" : "false");
-    renderEnderecos(container, data.itens || [], disponiveis);
-  } catch (e) {
-    if (container) container.innerHTML = `<div class="msg err">${esc(e.message)}</div>`;
-  }
-}
-
-function salvarEndereco(){ clearMsg($("endMsg")); try{ const data=call("salvarEndereco",{codigo:$("endCodigo").value.trim().toUpperCase(),capacidade_maxima:parseInt($("endCapacidade").value,10)}); showMsg($("endMsg"),data.message,true); }catch(e){ showMsg($("endMsg"),e.message,false); } }
-function abrirDetalheEndereco(item){ enderecoDetalheAtual=item; clearMsg($("endDetalheMsg")); $("endDetalheCapacidade").value=item.capacidade_maxima; $("endDetalheResumo").innerHTML=`<div class="item"><div class="line"><b>Endereço:</b> ${esc(item.codigo)}</div><div class="line"><b>Ocupado:</b> ${esc(item.ocupado)}</div><div class="line"><b>Capacidade atual:</b> ${esc(item.capacidade_maxima)}</div><span class="strong">Disponível: ${esc(item.disponivel)}</span></div>`; showScreen("endereco-detalhe"); }
-function salvarEnderecoDetalhe(){ if(!enderecoDetalheAtual)return; clearMsg($("endDetalheMsg")); try{ const data=call("salvarEndereco",{codigo:enderecoDetalheAtual.codigo,capacidade_maxima:parseInt($("endDetalheCapacidade").value,10)}); showMsg($("endDetalheMsg"),data.message,true); }catch(e){ showMsg($("endDetalheMsg"),e.message,false); } }
-function consultarEstoque(){ try{ const data=call("consultarEstoque",$("estNumero").value.trim()); renderItems($("estoqueResultado"),data.itens,item=>`<div class="item"><div class="line"><b>${esc(item.numero)} - ${esc(item.nome)}</b></div>${item.codigo_barras?`<div class="line"><b>QR / código:</b> ${esc(item.codigo_barras)}</div>`:""}<div class="line"><b>Lote:</b> ${esc(item.lote)}</div><div class="line"><b>Endereço:</b> ${esc(item.endereco)}</div><span class="strong">Saldo: ${esc(item.quantidade)} unidade(s)</span><div class="line" style="margin-top:6px;"><b>QC:</b> ${esc(item.unidades_por_caixa)} unidade(s) por caixa</div><div class="line"><b>Fabricação:</b> ${esc(item.fabricacao)}</div><div class="line"><b>Vencimento:</b> ${esc(item.vencimento)}</div></div>`); }catch(e){ $("estoqueResultado").innerHTML=`<div class="msg err">${esc(e.message)}</div>`; } }
-function buscarOrientacao(){ $("confirmBox").style.display="none"; try{ currentPreview=call("previewSeparacao",{numero:$("produto").value.trim(),quantidade:parseInt($("quantidade").value,10)}); $("resultado").innerHTML=`<div class="item"><b>Produto:</b> ${esc(currentPreview.produto)} - ${esc(currentPreview.nome)}<br><b>Solicitado:</b> ${esc(currentPreview.quantidade_pedida)} unidade(s)</div>`; $("confirmItens").innerHTML=currentPreview.orientacoes.map((item,idx)=>`<div class="item"><b>Item ${idx+1}</b><div class="line"><b>Lote:</b> ${esc(item.lote)}</div><div class="line"><b>Endereço:</b> ${esc(item.endereco)}</div><span class="strong">Separar: ${esc(item.qtd_operador)} ${esc(item.unidade_operador)}</span><label>Digite a quantidade de ${esc(item.unidade_operador)} que você pegou</label><input class="confirmInput" inputmode="numeric" data-index="${idx}"></div>`).join(""); $("confirmBox").style.display="block"; $("confirmar").disabled=false; }catch(e){ $("resultado").innerHTML=`<div class="msg err">${esc(e.message)}</div>`; } }
-function confirmarSeparacao(){ if(!currentPreview)return; try{ const confirmacoes=[...document.querySelectorAll(".confirmInput")].map(i=>({index:parseInt(i.dataset.index,10),quantidade_confirmada:parseInt(i.value,10)})); const data=call("confirmarSeparacao",{token:currentPreview.token,confirmacoes}); showMsg($("confirmMsg"),data.message,true); $("confirmar").disabled=true; }catch(e){ showMsg($("confirmMsg"),e.message,false); } }
-function consultarMovimentacoes(){ try{ const data=call("listarMovimentacoes",$("movNumero").value.trim()); renderItems($("movResultado"),data.itens,item=>`<div class="item"><span class="badge">${esc(item.tipo)}</span><div class="line"><b>${esc(item.produto_numero)} - ${esc(item.produto_nome)}</b></div><div class="line"><b>Lote:</b> ${esc(item.lote)}</div><div class="line"><b>Endereço:</b> ${esc(item.endereco)}</div><div class="line"><b>Quantidade:</b> ${esc(item.quantidade)}</div><div class="line"><b>Saldo após:</b> ${esc(item.saldo_apos)}</div><div class="line"><b>Data/hora:</b> ${esc(item.data_hora)}</div></div>`); }catch(e){ $("movResultado").innerHTML=`<div class="msg err">${esc(e.message)}</div>`; } }
-
-document.querySelectorAll("[data-screen]").forEach(b=>b.onclick=()=>showScreen(b.dataset.screen));
-$("salvarCadastro").onclick=salvarCadastro; $("consultarProdutos").onclick=consultarProdutos; $("salvarEntrada").onclick=salvarEntrada; $("abrirLotesEntrada").onclick=abrirLotesEntrada; $("salvarEndereco").onclick=salvarEndereco; $("salvarEnderecoDetalhe").onclick=salvarEnderecoDetalhe; $("consultarEnderecos").onclick=()=>consultarEnderecos(false); $("verEnderecosEntrada").onclick=()=>consultarEnderecos(true); $("consultarEstoque").onclick=consultarEstoque; $("buscar").onclick=buscarOrientacao; $("confirmar").onclick=confirmarSeparacao; $("cancelar").onclick=()=>{$("confirmBox").style.display="none";$("resultado").innerHTML="";}; $("consultarMovimentacoes").onclick=consultarMovimentacoes;
-$("abrirEnderecosCadastro").onclick=abrirEnderecosCadastro; $("fecharEnderecosCadastro").onclick=()=>$("cadEnderecosPopup").classList.remove("open"); $("fecharLotesEntrada").onclick=()=>$("lotesEntradaPopup").classList.remove("open"); $("fecharEnderecosPopup").onclick=()=>$("enderecosPopup").classList.remove("open"); $("fecharEnderecosEntradaPopup").onclick=()=>$("enderecosEntrada").classList.remove("open");
-["cadEnderecosPopup","lotesEntradaPopup","enderecosPopup","enderecosEntrada"].forEach(id=>$(id).onclick=e=>{ if(e.target.id===id)$(id).classList.remove("open"); });
-attachDateMask("cadFabricacao"); attachDateMask("cadVencimento");
-$("startScannerCadastro").onclick=()=>scan($("readerCadastro"),$("cadCodigoBarras"),$("scanCadastroMsg"),s=>scannerCadastro=s,$("startScannerCadastro"));
-$("startScannerEntrada").onclick=()=>scan($("readerEntrada"),$("entNumero"),$("scanEntradaMsg"),s=>scannerEntrada=s,$("startScannerEntrada"));
-$("startScannerEstoque").onclick=()=>scan($("readerEstoque"),$("estNumero"),$("scanEstoqueMsg"),s=>scannerEstoque=s,$("startScannerEstoque"),consultarEstoque);
-$("startScanner").onclick=()=>scan($("reader"),$("produto"),$("scanMsg"),s=>scanner=s,$("startScanner"));
-
-window.addEventListener("DOMContentLoaded", () => {
-  atualizarDashboardKPIs();
-});
-</script>
+<script src="app.js"></script>
 </body>
 </html>

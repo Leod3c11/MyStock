@@ -24,6 +24,8 @@ jobs:
 
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.8'
 
       - name: Build debug APK
         working-directory: mystock_android
@@ -38,6 +40,6 @@ jobs:
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: MyStock-debug-apk
+          name: MyStock-Standalone-Android-APK
           path: mystock_android/app/build/outputs/apk/debug/*.apk
-          retention-days: 3
+          retention-days: 7
